@@ -271,7 +271,7 @@ input[type=number]{width:80px;text-align:center;}
 
   <div class="sct">Calendar &amp; Sync</div>
   <div class="sc">
-    <div class="sr" id="syncRow"><div><div class="sl2">&#9889; Shortcuts Script</div><div class="ss">Auto alarm nightly</div></div><span style="color:var(--mu)">&#8250;</span></div>
+    <div class="sr" id="syncRow"><div><div class="sl2">&#9889; Shortcuts Script</div><div class="ss">Auto alarm + calendar sync</div></div><span style="color:var(--mu)">&#8250;</span></div>
     <div class="sr" id="exportRow"><div><div class="sl2">&#128228; Export 12 months (.ics)</div><div class="ss">Import into iPhone Calendar</div></div><span style="color:var(--mu)">&#8250;</span></div>
   </div>
 
@@ -320,6 +320,21 @@ input[type=number]{width:80px;text-align:center;}
       <div id="hlR" onclick="setHL('r')" style="width:30px;height:30px;border-radius:8px;background:#EF4444;border:2px solid transparent;cursor:pointer;transition:transform .15s"></div>
       <div id="hlG" onclick="setHL('g')" style="width:30px;height:30px;border-radius:8px;background:#10B981;border:2px solid transparent;cursor:pointer;transition:transform .15s"></div>
       <div id="hlB" onclick="setHL('b')" style="width:30px;height:30px;border-radius:8px;background:#818CF8;border:2px solid transparent;cursor:pointer;transition:transform .15s"></div>
+    </div>
+    <div id="otToggleRow" style="display:none;margin-top:12px;padding:10px 0;border-top:1px solid var(--bd)">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:14px;font-weight:600">Mark as Overtime</div>
+          <div style="font-size:12px;color:var(--mu);margin-top:1px" id="otToggleDesc">Override automatic OT detection</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <select id="otManualSel" onchange="setManualOT(this.value)" style="width:auto;padding:6px 10px;font-size:13px">
+            <option value="auto">Auto detect</option>
+            <option value="yes">Yes — OT</option>
+            <option value="no">No — Normal</option>
+          </select>
+        </div>
+      </div>
     </div>
     <div style="margin-top:13px;margin-bottom:5px;font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.07em;text-transform:uppercase">Note</div>
     <textarea id="dayNote" placeholder="Add a note for this day..."></textarea>
@@ -435,7 +450,28 @@ input[type=number]{width:80px;text-align:center;}
   <div class="sht">&#9889; Shortcuts Script</div>
   <div class="shs">
     <div style="background:var(--nb);border:1px solid var(--cn);border-radius:11px;padding:12px;margin-bottom:10px;font-size:13px;color:#A0A0D0;line-height:1.7">
-      Runs midnight nightly. Creates alarms only if not already set. Deletes passed alarms. Adds shift to Calendar.
+      Runs automatically every night. Only creates alarms if not already set with the same label. Deletes ShiftCal alarms after they pass. Adds shift event to Calendar.
+    </div>
+    <div style="background:var(--s2);border-radius:11px;padding:12px;margin-bottom:10px">
+      <div style="font-size:12px;color:var(--mu);margin-bottom:8px;font-weight:600">Automation Settings</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">
+        <div><div style="font-size:12px;color:var(--mu);margin-bottom:3px">Run time</div>
+          <select id="scRunTime" style="width:100%">
+            <option value="00:00" selected>12:00 AM (midnight)</option>
+            <option value="22:00">10:00 PM</option>
+            <option value="21:00">9:00 PM</option>
+            <option value="20:00">8:00 PM</option>
+          </select>
+        </div>
+        <div><div style="font-size:12px;color:var(--mu);margin-bottom:3px">Days ahead</div>
+          <select id="scDaysAhead" style="width:100%">
+            <option value="1" selected>Tomorrow (1 day)</option>
+            <option value="2">2 days ahead</option>
+            <option value="3">3 days ahead</option>
+          </select>
+        </div>
+      </div>
+      <button onclick="openScSheet()" style="width:100%;padding:9px;border-radius:9px;border:none;background:linear-gradient(135deg,#6366F1,#10B981);color:white;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">&#8635; Regenerate Script</button>
     </div>
     <div id="scOut" style="background:var(--bg);border:1px solid var(--bd);border-radius:11px;padding:12px;font-family:'Courier New',monospace;font-size:11px;color:#C0E0C0;line-height:1.9;white-space:pre-wrap;word-break:break-word;max-height:280px;overflow-y:auto;margin-bottom:8px"></div>
     <button class="btn" id="scCpBtn" onclick="cpScript()" style="background:var(--nb);border:1px solid var(--cn);color:#818CF8;border-radius:11px;padding:10px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-top:0">&#128203; Copy Script</button>
@@ -495,6 +531,7 @@ let ST={
   otCfg:JSON.parse(JSON.stringify(DEF_OT_CFG)),
   otRate:0.317,
   otCurr:'BHD',
+  manualOT:{},  // {ds: true/false} — user explicitly set OT or not
   lastSync:null,
 };
 function loadST(){
@@ -502,6 +539,7 @@ function loadST(){
     if(!ST.almCfg)ST.almCfg=JSON.parse(JSON.stringify(DEF_ALM_CFG));
     if(!ST.otCfg)ST.otCfg=JSON.parse(JSON.stringify(DEF_OT_CFG));
     if(!ST.nt)ST.nt={};if(!ST.hl)ST.hl={};
+    if(!ST.manualOT)ST.manualOT={};
   }}catch(e){}
 }
 function savST(){try{localStorage.setItem('sc_v8',JSON.stringify(ST));}catch(e){}}
@@ -527,23 +565,49 @@ function getBaseShift(ds){
   return ST.pat[((diff%len)+len)%len];
 }
 
-// Is this date an overtime day?
-// 1. Off in base pattern but now showing a work shift (override switched off->duty)
-// 2. Standard shift in base pattern but override changed to longer shift (morning->lmorning etc)
-// 3. Temp period shifts that differ from base off days
+// OT rules:
+// - If user explicitly set manualOT[ds]=true => OT
+// - If user explicitly set manualOT[ds]=false => NOT OT (override auto)
+// - If override changed OFF day to any duty => auto OT
+// - Normal duty to same or different normal duty => NOT OT unless manual
 function isOT(ds){
   const actual=getShift(ds);
-  if(!SH[actual]?.s)return false; // rest days not OT
+  if(!SH[actual]?.s)return false; // rest days never OT
+  // User explicitly toggled OT
+  if(ST.manualOT[ds]===true)return true;
+  if(ST.manualOT[ds]===false)return false;
+  // Auto: only if base was OFF and now has a duty
   if(ST.ov[ds]){
     const base=getBaseShift(ds);
-    if(!SH[base]?.s)return true; // off->duty = OT
-    // longer shift than base = OT
-    if(SH[actual].h>SH[base].h)return true;
+    if(!SH[base]?.s)return true; // off->duty = auto OT
   }
-  // temp period overriding an off day
+  // Temp period over an off base day
   const d=pd(ds);
-  for(const t of ST.tp){const ts=pd(t.s),te=pd(t.e);if(d>=ts&&d<=te){const base=getBaseShift(ds);if(!SH[base]?.s)return true;if(SH[actual].h>(SH[base]?.h||0))return true;}}
+  for(const t of ST.tp){
+    const ts=pd(t.s),te=pd(t.e);
+    if(d>=ts&&d<=te){
+      const base=getBaseShift(ds);
+      if(!SH[base]?.s)return true;
+    }
+  }
   return false;
+}
+
+// Get overtime extra hours for a day
+// For off->duty: all hours are OT
+// For duty->longer duty (manual OT): only EXTRA hours beyond base
+function getOTHours(ds){
+  const actual=getShift(ds);
+  if(!SH[actual]?.s)return 0;
+  if(!isOT(ds))return 0;
+  const baseSk=getBaseShift(ds);
+  const baseSh=SH[baseSk];
+  if(!baseSh?.s){
+    // off->duty: all hours
+    return SH[actual].h;
+  }
+  // duty->longer: only extra hours
+  return Math.max(0,SH[actual].h-baseSh.h);
 }
 
 function alarms(sk){
@@ -570,22 +634,18 @@ function calcOT(startDs, endDs){
       let normalSegs=[], otSegs=[];
 
       if(otFlag){
-        if(!baseSh?.s){
-          // OFF -> DUTY: entire shift is OT at 1.5x
-          otSegs=[{h:sh.h,r:1.5,label:'Off→Duty'}];
-          normalSegs=[];
-        } else {
-          // LONGER SHIFT than base (e.g. morning→long morning)
-          // Normal hours = base hours at normal rate from otCfg
-          // Extra hours = (actual - base) at 1.5x
-          const baseH=baseSh.h;
-          const extraH=sh.h-baseH;
-          // Normal portion uses configured segs for the BASE shift
-          const baseCfgSegs=ST.otCfg[baseSk]?.segs||[{h:baseH,r:1.0}];
-          normalSegs=baseCfgSegs.map(s=>({...s,label:'Normal'}));
-          if(extraH>0){
-            otSegs=[{h:extraH,r:1.5,label:'Extra (OT)'}];
-          }
+        const otHours=getOTHours(ds);
+        const normalHours=sh.h-otHours;
+        if(normalHours>0){
+          // Use configured segs for base or actual shift normal portion
+          const cfgSk=baseSh?.s?baseSk:sk;
+          const cfgSegs=ST.otCfg[cfgSk]?.segs||[{h:normalHours,r:1.0}];
+          // Scale segs to fit normalHours
+          const cfgTotal=cfgSegs.reduce((a,s)=>a+s.h,0);
+          normalSegs=cfgSegs.map(s=>({...s,h:+(s.h*(normalHours/cfgTotal)).toFixed(2),label:'Normal'}));
+        }
+        if(otHours>0){
+          otSegs=[{h:otHours,r:1.5,label:baseSh?.s?'Extra OT':'Off→Duty'}];
         }
       } else {
         normalSegs=ST.otCfg[sk]?.segs||[{h:sh.h,r:1.0}];
@@ -756,6 +816,23 @@ function openDaySheet(ds){
   document.getElementById('dayNote').value=ST.nt[ds]||'';
   editHL=ST.hl[ds]||'';updateHL(editHL);
   document.getElementById('rFrom').value=ds;document.getElementById('rTo').value=ds;
+
+  // Show OT toggle only if day has a work shift
+  const sk0=getShift(ds);
+  const otRow=document.getElementById('otToggleRow');
+  const otSel=document.getElementById('otManualSel');
+  const otDesc=document.getElementById('otToggleDesc');
+  if(SH[sk0]?.s){
+    otRow.style.display='block';
+    const manVal=ST.manualOT[ds];
+    otSel.value=manVal===true?'yes':manVal===false?'no':'auto';
+    const base0=getBaseShift(ds);
+    const autoOTDesc=!SH[base0]?.s?'Auto: Off→Duty (OT)':SH[sk0].h>(SH[base0]?.h||0)?'Longer shift — specify if OT':'Normal duty (no auto OT)';
+    otDesc.textContent=autoOTDesc;
+  } else {
+    otRow.style.display='none';
+  }
+
   repOn=false;reEv=1;reOc=4;
   document.getElementById('repTg').classList.remove('on');
   document.getElementById('repOpts').style.display='none';
@@ -773,6 +850,14 @@ function updateHL(hl){
   });
 }
 function setHL(h){editHL=h;updateHL(h);}
+function setManualOT(v){
+  // Store immediately so OT indicator updates when applied
+  if(editDs){
+    if(v==='yes')ST.manualOT[editDs]=true;
+    else if(v==='no')ST.manualOT[editDs]=false;
+    else delete ST.manualOT[editDs];
+  }
+}
 
 function renderSG(gId,cur,onSel){
   const g=document.getElementById(gId);g.innerHTML='';
@@ -793,7 +878,9 @@ function applyOv(){
   const to=pd(document.getElementById('rTo').value);
   const unit=document.getElementById('reU').value;
   const note=document.getElementById('dayNote').value.trim();
-  const apR=(f,t)=>{let c=new Date(f);while(c<=t){const ds2=dk(c);ST.ov[ds2]=editSk;if(editHL)ST.hl[ds2]=editHL;else delete ST.hl[ds2];if(note)ST.nt[ds2]=note;else delete ST.nt[ds2];c=aD(c,1);}};
+  const otSel=document.getElementById('otManualSel');
+  const otVal=otSel?otSel.value:'auto';
+  const apR=(f,t)=>{let c=new Date(f);while(c<=t){const ds2=dk(c);ST.ov[ds2]=editSk;if(editHL)ST.hl[ds2]=editHL;else delete ST.hl[ds2];if(note)ST.nt[ds2]=note;else delete ST.nt[ds2];if(otVal==='yes')ST.manualOT[ds2]=true;else if(otVal==='no')ST.manualOT[ds2]=false;else delete ST.manualOT[ds2];c=aD(c,1);}};
   apR(from,to);
   if(repOn){let anc=new Date(from);const sp=to-from;for(let i=1;i<reOc;i++){if(unit==='day')anc=aD(anc,reEv);else if(unit==='week')anc=aD(anc,reEv*7);else{anc=new Date(anc);anc.setMonth(anc.getMonth()+reEv);}apR(anc,new Date(anc.getTime()+sp));}}
   savST();selDay=null;render();closeOv('dayOv');
@@ -802,7 +889,7 @@ function applyOv(){
 function clearOv(){
   const from=pd(document.getElementById('rFrom').value);
   const to=pd(document.getElementById('rTo').value);
-  let c=new Date(from);while(c<=to){const ds2=dk(c);delete ST.ov[ds2];delete ST.hl[ds2];delete ST.nt[ds2];c=aD(c,1);}
+  let c=new Date(from);while(c<=to){const ds2=dk(c);delete ST.ov[ds2];delete ST.hl[ds2];delete ST.nt[ds2];delete ST.manualOT[ds2];c=aD(c,1);}
   savST();selDay=null;render();closeOv('dayOv');
 }
 
@@ -1009,7 +1096,7 @@ function setAlmB(sk,v){if(!ST.almCfg[sk])ST.almCfg[sk]={c:1,b:v,g:5};ST.almCfg[s
 function setAlmG(sk,v){if(!ST.almCfg[sk])ST.almCfg[sk]={c:1,b:'05:00',g:5};ST.almCfg[sk].g=Math.max(1,parseInt(v)||5);savST();renderAlmCfg();render();}
 
 function resetOv(){if(confirm('Clear all overrides, notes, highlights?')){ST.ov={};ST.ht={};ST.nt={};ST.hl={};savST();render();}}
-function resetAll(){if(confirm('Full reset?')){Object.assign(ST,{cs:'2026-05-10',pat:['morning','morning','morning','night','night','night','off','off','afternoon','afternoon','afternoon','off'],ov:{},nt:{},hl:{},tp:[],almCfg:JSON.parse(JSON.stringify(DEF_ALM_CFG)),otCfg:JSON.parse(JSON.stringify(DEF_OT_CFG)),otRate:12,lastSync:null});savST();render();}}
+function resetAll(){if(confirm('Full reset?')){Object.assign(ST,{cs:'2026-05-10',pat:['morning','morning','morning','night','night','night','off','off','afternoon','afternoon','afternoon','off'],ov:{},nt:{},hl:{},tp:[],manualOT:{},almCfg:JSON.parse(JSON.stringify(DEF_ALM_CFG)),otCfg:JSON.parse(JSON.stringify(DEF_OT_CFG)),otRate:0.317,otCurr:'BHD',lastSync:null});savST();render();}}
 
 // ── OVERTIME PAGE ─────────────────────────────────────────────────────────────
 function renderOTPage(){
@@ -1045,66 +1132,100 @@ function refreshOT(){
 
   const rate=res.rate;
   const curr=getCurrSymbol(ST.otCurr||'BHD');
-  const hasOT=res.otH>0;
+  const otDays=res.days.filter(d=>d.isOT&&d.dayOtH>0);
+  const hasOT=otDays.length>0;
+
+  // Summary card — split normal vs OT clearly
+  const normalH=res.totalH-res.otH;
+  const normalPay=res.totalPay-res.otPay;
 
   let html=`
     <div class="otsum">
-      <div style="font-size:12px;color:var(--mu);margin-bottom:4px">TOTAL HOURS WORKED</div>
-      <div style="font-size:32px;font-weight:800;color:#FBBF24">${res.totalH.toFixed(1)}h</div>
-      <div style="font-size:13px;color:var(--mu);margin-top:4px">Est. Pay: <strong style="color:#E8E8F8">&#163;${res.totalPay.toFixed(2)}</strong> @ &#163;${rate}/hr base</div>
-      ${hasOT?`<div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(251,191,36,0.3)"><div style="font-size:11px;color:var(--mu)">Overtime hours</div><div style="font-size:20px;font-weight:700;color:#FBBF24">${res.otH.toFixed(1)}h OT</div></div>`:''}
-    </div>`;
-
-  // Breakdown by shift type
-  const byType={};
-  res.days.forEach(d=>{
-    if(!byType[d.sk])byType[d.sk]={count:0,h:0,pay:0,otCount:0,segs:d.segs};
-    byType[d.sk].count++;byType[d.sk].h+=d.dayH;byType[d.sk].pay+=d.dayPay;
-    if(d.isOT)byType[d.sk].otCount++;
-  });
-
-  html+=`<div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.08em;text-transform:uppercase;margin:14px 0 7px">Breakdown by Shift</div>`;
-  html+=`<div style="background:var(--s1);border-radius:12px;overflow:hidden;margin-bottom:12px">`;
-  Object.entries(byType).forEach(([sk,data])=>{
-    const sh=SH[sk];const col=SC[sk];const bg=SBG[sk];
-    const segStr=data.segs.map(seg=>`${seg.h}h×${seg.r}x${seg.label?'('+seg.label+')':''}`).join(' + ');
-    html+=`<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--bd)">
-      <div style="font-size:22px">${sh.e}</div>
-      <div style="flex:1">
-        <div style="font-size:14px;font-weight:700;color:${col}">${sh.n}</div>
-        <div style="font-size:11px;color:var(--mu);margin-top:1px">${data.count} day${data.count>1?'s':''} &middot; ${segStr}</div>
-        ${data.otCount?`<div style="font-size:11px;color:#FBBF24;margin-top:1px">${data.otCount} OT day${data.otCount>1?'s':''}</div>`:''}
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:15px;font-weight:700;color:${col}">${data.h.toFixed(1)}h</div>
-        <div style="font-size:12px;color:var(--mu)">&#163;${data.pay.toFixed(2)}</div>
-      </div>
-    </div>`;
-  });
-  html+=`</div>`;
-
-  // Day by day list — only show OT days and work days
-  const workDays=res.days.filter(d=>d.dayH>0);
-  if(workDays.length){
-    html+=`<div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px">Day by Day</div>`;
-    html+=`<div style="background:var(--s1);border-radius:12px;overflow:hidden">`;
-    workDays.forEach(d=>{
-      const sh=SH[d.sk];const col=SC[d.sk];const date=pd(d.ds);
-      const segStr=d.segs.map(seg=>`${seg.h}h\xd7${seg.r}`).join('+');
-      html+=`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--bd)${d.isOT?';background:rgba(251,191,36,0.05)':''}">
-        <div style="font-size:18px">${sh.e}</div>
-        <div style="flex:1">
-          <div style="font-size:13px;font-weight:600;color:${col}">${date.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}${d.isOT?' <span style="font-size:10px;color:#FBBF24;font-weight:700;background:rgba(251,191,36,0.15);padding:1px 5px;border-radius:4px">OT</span>':''}</div>
-          <div style="font-size:11px;color:var(--mu)">${segStr}</div>
+      <div style="font-size:12px;color:var(--mu);margin-bottom:2px;text-transform:uppercase;letter-spacing:.07em">Overtime Summary</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
+        <div style="background:rgba(0,0,0,.2);border-radius:10px;padding:10px;text-align:center">
+          <div style="font-size:10px;color:var(--mu);margin-bottom:3px">OT HOURS</div>
+          <div style="font-size:26px;font-weight:800;color:#FBBF24">${res.otH.toFixed(1)}h</div>
+          <div style="font-size:11px;color:var(--mu);margin-top:2px">${curr}${res.otPay.toFixed(3)}</div>
         </div>
-        <div style="text-align:right">
-          <div style="font-size:14px;font-weight:700;color:${col}">${d.dayH}h</div>
-          <div style="font-size:11px;color:var(--mu)">&#163;${d.dayPay.toFixed(2)}</div>
+        <div style="background:rgba(0,0,0,.2);border-radius:10px;padding:10px;text-align:center">
+          <div style="font-size:10px;color:var(--mu);margin-bottom:3px">OT DAYS</div>
+          <div style="font-size:26px;font-weight:800;color:#FBBF24">${otDays.length}</div>
+          <div style="font-size:11px;color:var(--mu);margin-top:2px">days with OT</div>
+        </div>
+      </div>
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(251,191,36,.2);display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:12px;color:var(--mu)">Total hours worked: <strong style="color:var(--tx)">${res.totalH.toFixed(1)}h</strong></div>
+        <div style="font-size:12px;color:var(--mu)">Normal: <strong style="color:var(--tx)">${normalH.toFixed(1)}h</strong></div>
+      </div>
+    </div>`;
+
+  // Only show OT days section if there are any
+  if(!hasOT){
+    html+=`<div style="background:var(--s2);border-radius:12px;padding:20px;text-align:center;margin-bottom:12px">
+      <div style="font-size:28px;margin-bottom:8px">✓</div>
+      <div style="font-size:15px;font-weight:700;color:#10B981">No Overtime</div>
+      <div style="font-size:13px;color:var(--mu);margin-top:4px">No overtime days in this period.</div>
+    </div>`;
+  } else {
+    // OT days only
+    html+=`<div style="font-size:11px;font-weight:700;color:#FBBF24;letter-spacing:.08em;text-transform:uppercase;margin:14px 0 7px">Overtime Days</div>`;
+    html+=`<div style="background:var(--s1);border-radius:12px;overflow:hidden;margin-bottom:12px">`;
+    otDays.forEach(d=>{
+      const sh=SH[d.sk];const col=SC[d.sk];const date=pd(d.ds);
+      const otSegStr=d.otSegs.map(seg=>`${seg.h}h×${seg.r}x`).join('+');
+      const baseSh=SH[d.baseSk];
+      const reason=!baseSh?.s?'Off→Duty':`${d.normalSegs.reduce((a,s)=>a+s.h,0).toFixed(1)}h normal + ${d.dayOtH.toFixed(1)}h extra`;
+      html+=`<div style="padding:11px 14px;border-bottom:1px solid var(--bd);background:rgba(251,191,36,.04)">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="font-size:20px">${sh.e}</div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;color:${col}">${date.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}</div>
+            <div style="font-size:11px;color:var(--mu);margin-top:1px">${reason}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:14px;font-weight:800;color:#FBBF24">${d.dayOtH.toFixed(1)}h OT</div>
+            <div style="font-size:11px;color:var(--mu)">${curr}${d.dayOtPay.toFixed(3)}</div>
+          </div>
+        </div>
+        <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+          ${d.segs.map(seg=>`<div style="background:${seg.label&&seg.label.includes('OT')||seg.label&&seg.label.includes('Duty')?'rgba(251,191,36,.12)':'rgba(255,255,255,.05)'};border-radius:6px;padding:3px 8px;font-size:11px;color:${seg.label&&(seg.label.includes('OT')||seg.label.includes('Duty'))?'#FBBF24':'var(--mu)'}">${seg.h}h × ${seg.r}x ${seg.label?'('+seg.label+')':''}</div>`).join('')}
         </div>
       </div>`;
     });
     html+=`</div>`;
   }
+
+  // All work days summary (collapsed by shift type, not per day)
+  html+=`<div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.08em;text-transform:uppercase;margin:14px 0 7px">All Work Days</div>`;
+  const byType={};
+  res.days.forEach(d=>{
+    if(d.dayH<=0)return;
+    if(!byType[d.sk])byType[d.sk]={count:0,h:0,pay:0,otCount:0,otH:0};
+    byType[d.sk].count++;byType[d.sk].h+=d.dayH;byType[d.sk].pay+=d.dayPay;
+    if(d.isOT){byType[d.sk].otCount++;byType[d.sk].otH+=d.dayOtH;}
+  });
+  html+=`<div style="background:var(--s1);border-radius:12px;overflow:hidden;margin-bottom:12px">`;
+  if(!Object.keys(byType).length){
+    html+=`<div style="padding:14px;text-align:center;color:var(--mu);font-size:13px">No work days in this period</div>`;
+  }
+  Object.entries(byType).forEach(([sk,data])=>{
+    const sh=SH[sk];const col=SC[sk];
+    html+=`<div style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid var(--bd)">
+      <div style="font-size:20px">${sh.e}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700;color:${col}">${sh.n}</div>
+        <div style="font-size:11px;color:var(--mu);margin-top:1px">${data.count} day${data.count>1?'s':''}${data.otCount?` · <span style="color:#FBBF24">${data.otCount} OT</span>`:''}
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:14px;font-weight:700;color:${col}">${data.h.toFixed(1)}h</div>
+        ${data.otH>0?`<div style="font-size:11px;color:#FBBF24">${data.otH.toFixed(1)}h OT</div>`:''}
+        <div style="font-size:11px;color:var(--mu)">${curr}${data.pay.toFixed(3)}</div>
+      </div>
+    </div>`;
+  });
+  html+=`</div>`;
 
   html+=`<div style="text-align:center;padding:16px 0;font-size:11px;color:#3A3A55">&copy; ${new Date().getFullYear()} Sayed Baqer Alseb3 Limited. All rights reserved.</div>`;
   r.innerHTML=html;
@@ -1137,23 +1258,86 @@ function exportICS(){
 }
 
 // ── SHORTCUTS SCRIPT ──────────────────────────────────────────────────────────
-document.getElementById('syncRow').onclick=openScSheet;
+document.getElementById('syncRow').onclick=()=>openScSheet();
 function openScSheet(){
   const len=ST.pat.length,cs=ST.cs;
+  const runTime=(document.getElementById('scRunTime')?.value)||'00:00';
+  const daysAhead=parseInt((document.getElementById('scDaysAhead')?.value)||'1');
   const groups={};ST.pat.forEach((k,i)=>{if(!groups[k])groups[k]=[];groups[k].push(i);});
-  let sc=`# ShiftCal Sync\n# ${new Date().toLocaleDateString()} | ${len}-day cycle from ${cs}\n\n`;
-  sc+=`[1] Get Current Date → "Today"\n[2] Adjust: Today +1 Day → "Tomorrow"\n[3] Calculate: days_between("${cs}", Tomorrow) mod ${len} → "CycleDay"\n\n`;
-  sc+=`[4] Get Alarms where Label contains "ShiftCal-"\n    For each disabled alarm → Delete\n\n`;
   const we=Object.entries(groups).filter(([k])=>SH[k]?.s);
+  const [rh,rm]=runTime.split(':').map(Number);
+  const runLabel=`${rh%12||12}:${String(rm).padStart(2,'0')} ${rh>=12?'PM':'AM'}`;
+
+  let sc='';
+  sc+=`# ═══════════════════════════════════════════════════\n`;
+  sc+=`#  ShiftCal Auto-Sync Shortcut\n`;
+  sc+=`#  Generated: ${new Date().toLocaleDateString()}\n`;
+  sc+=`#  Pattern: ${len}-day cycle from ${cs}\n`;
+  sc+=`#  Runs at: ${runLabel} daily | ${daysAhead} day(s) ahead\n`;
+  sc+=`# ═══════════════════════════════════════════════════\n\n`;
+
+  sc+=`STEP 1 — Get date to schedule for\n`;
+  sc+=`  Get Current Date → store as "Today"\n`;
+  sc+=`  Adjust Date: Today + ${daysAhead} Day${daysAhead>1?'s':''} → store as "TargetDate"\n\n`;
+
+  sc+=`STEP 2 — Calculate which day of the cycle TargetDate is\n`;
+  sc+=`  Calculate: days_between("${cs}", TargetDate) → "RawDiff"\n`;
+  sc+=`  Calculate: RawDiff mod ${len} → "CycleDay"\n\n`;
+
+  sc+=`STEP 3 — Clean up passed ShiftCal alarms\n`;
+  sc+=`  Get all Alarms where Label begins with "ShiftCal-"\n`;
+  sc+=`  For each alarm in that list:\n`;
+  sc+=`    If alarm.isEnabled = FALSE → Delete this alarm\n`;
+  sc+=`    (iOS auto-disables alarms after they fire)\n\n`;
+
+  sc+=`STEP 4 — Check what shift TargetDate is and set alarms\n`;
   we.forEach(([sk,days],i)=>{
     const s=SH[sk];const alm=alarms(sk);
-    sc+=`[${5+i}] ${i===0?'If':'Otherwise If'} CycleDay in [${days.join(',')}]\n`;
-    sc+=`    # ${s.n} (${s.s}\u2013${s.f})\n`;
-    sc+=`    If no "ShiftCal-${sk.toUpperCase()}-1" alarm exists:\n`;
-    alm.forEach((a,j)=>sc+=`      Create Alarm: ${a} — "ShiftCal-${sk.toUpperCase()}-${j+1}"\n`);
-    sc+=`    Add Calendar Event: "${s.e} ${s.n}" Tomorrow ${s.s}\u2013${s.f}\n\n`;
+    sc+=`  ${i===0?'If':'Otherwise If'} CycleDay is in [${days.join(', ')}]\n`;
+    sc+=`    # TargetDate = ${s.n} (${s.s}\u2013${s.f})\n`;
+    sc+=`    Check: Get Alarms where Label = "ShiftCal-${sk.toUpperCase()}-1"\n`;
+    sc+=`    If count of result = 0 (alarm does not exist yet):\n`;
+    alm.forEach((a,j)=>{
+      sc+=`      Create Alarm → Time: ${a} | Label: "ShiftCal-${sk.toUpperCase()}-${j+1}" | Enabled: ON\n`;
+    });
+    sc+=`    Add Calendar Event:\n`;
+    sc+=`      Title: "${s.e} ${s.n}"\n`;
+    sc+=`      Start: TargetDate at ${s.s}\n`;
+    sc+=`      End: TargetDate${s.nd?' +1 day':''} at ${s.f}\n`;
+    sc+=`      Calendar: Work (or your preferred calendar)\n\n`;
   });
-  sc+=`[${5+we.length}] Show Notification: "ShiftCal \u2713"\n\nAUTOMATION: Automation \u2192 + \u2192 Time of Day \u2192 12:00 AM \u2192 Daily \u2192 Ask Before Running: OFF`;
+  const offKeys=Object.entries(groups).filter(([k])=>!SH[k]?.s);
+  if(offKeys.length){
+    const offDays=offKeys.flatMap(([,d])=>d).sort((a,b)=>a-b);
+    sc+=`  Otherwise (CycleDay in [${offDays.join(', ')}])\n`;
+    sc+=`    # Rest/Leave/Sick day — no alarm\n`;
+    sc+=`    Delete any ShiftCal alarms for this day (cleanup)\n\n`;
+  }
+
+  sc+=`STEP 5 — Confirm\n`;
+  sc+=`  Show Notification:\n`;
+  sc+=`    Title: "ShiftCal \u2713"\n`;
+  sc+=`    Body: "Alarms set for [shift name] on [TargetDate]"\n\n`;
+
+  sc+=`# ═══════════════════════════════════════════════════\n`;
+  sc+=`#  HOW TO SET UP THE AUTOMATION\n`;
+  sc+=`# ═══════════════════════════════════════════════════\n`;
+  sc+=`1. Open Shortcuts app\n`;
+  sc+=`2. Tap + to create new shortcut\n`;
+  sc+=`3. Name it: ShiftCal Sync\n`;
+  sc+=`4. Add the actions above in order\n`;
+  sc+=`5. Go to Automation tab → +\n`;
+  sc+=`6. Choose: Time of Day\n`;
+  sc+=`7. Set time: ${runLabel}\n`;
+  sc+=`8. Repeat: Daily\n`;
+  sc+=`9. Select shortcut: ShiftCal Sync\n`;
+  sc+=`10. Turn OFF "Ask Before Running"\n`;
+  sc+=`    → Tap Done\n\n`;
+  sc+=`# The shortcut will now run silently every night,\n`;
+  sc+=`# set tomorrow's alarms only if not already set,\n`;
+  sc+=`# delete alarms that have already fired,\n`;
+  sc+=`# and add a calendar event for the shift.\n`;
+
   document.getElementById('scOut').textContent=sc;
   openOv('scOv');
 }
