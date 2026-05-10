@@ -72,7 +72,7 @@ transition:border-color .12s;
 }
 .cd:active{transform:scale(0.95);}
 .cd.xo{opacity:.2;pointer-events:none;}
-.cd.sel{border-color:#fff !important;box-shadow:0 0 0 1px rgba(255,255,255,.25);}
+.cd.sel{/* selection tracked internally only */}
 .cd.tod .dn{background:#E8E8F8;color:#0A0A12;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-weight:800;}
 .cd.ovr{border-style:solid;}
 .cd.ot{/* overtime */}
@@ -232,10 +232,31 @@ input[type=number]{width:80px;text-align:center;}
   <div class="sct">Overtime Settings</div>
   <div class="sc">
     <div class="sr" style="cursor:default">
+      <div><div class="sl2">Currency</div><div class="ss">Select your country currency</div></div>
+      <select id="otCurr" onchange="saveCurr()" style="width:auto;padding:7px 10px">
+        <option value="BHD">BHD (Bahrain Dinar)</option>
+        <option value="USD">USD (US Dollar)</option>
+        <option value="GBP">GBP (British Pound)</option>
+        <option value="EUR">EUR (Euro)</option>
+        <option value="AED">AED (UAE Dirham)</option>
+        <option value="SAR">SAR (Saudi Riyal)</option>
+        <option value="KWD">KWD (Kuwait Dinar)</option>
+        <option value="QAR">QAR (Qatar Riyal)</option>
+        <option value="OMR">OMR (Oman Rial)</option>
+        <option value="EGP">EGP (Egyptian Pound)</option>
+        <option value="JOD">JOD (Jordan Dinar)</option>
+        <option value="INR">INR (Indian Rupee)</option>
+        <option value="PKR">PKR (Pakistani Rupee)</option>
+        <option value="PHP">PHP (Philippine Peso)</option>
+        <option value="CAD">CAD (Canadian Dollar)</option>
+        <option value="AUD">AUD (Australian Dollar)</option>
+      </select>
+    </div>
+    <div class="sr" style="cursor:default">
       <div><div class="sl2">Hourly Rate</div><div class="ss">Your base pay per hour</div></div>
       <div style="display:flex;align-items:center;gap:6px">
-        <span style="font-size:13px;color:var(--mu)">£</span>
-        <input type="number" id="otRate" min="0" step="0.5" value="12" onchange="saveOT()" style="width:70px"/>
+        <span style="font-size:13px;color:var(--mu)" id="currSymbol">BD</span>
+        <input type="number" id="otRate" min="0" step="0.001" value="0.317" onchange="saveOT()" style="width:90px"/>
       </div>
     </div>
   </div>
@@ -472,7 +493,8 @@ let ST={
   ov:{}, nt:{}, hl:{}, tp:[],
   almCfg:JSON.parse(JSON.stringify(DEF_ALM_CFG)),
   otCfg:JSON.parse(JSON.stringify(DEF_OT_CFG)),
-  otRate:12,
+  otRate:0.317,
+  otCurr:'BHD',
   lastSync:null,
 };
 function loadST(){
@@ -532,9 +554,8 @@ function alarms(sk){
 
 // ── OVERTIME CALCULATION ─────────────────────────────────────────────────────
 function calcOT(startDs, endDs){
-  // Returns {days:[{date,shift,base,segs,totalH,totalPay,isOT}], summary}
   const from=pd(startDs),to=pd(endDs);
-  const rate=parseFloat(ST.otRate)||12;
+  const rate=parseFloat(ST.otRate)||0.317;
   const days=[];
   let totalH=0,totalPay=0,otH=0,otPay=0;
   let cur=new Date(from);
@@ -543,25 +564,41 @@ function calcOT(startDs, endDs){
     const sk=getShift(ds);
     const sh=SH[sk];
     if(sh?.s){
-      const ot=isOT(ds);
+      const otFlag=isOT(ds);
       const baseSk=getBaseShift(ds);
-      let segs;
-      if(ot){
-        // Off->duty: use 1.5x for all hours
-        if(!SH[baseSk]?.s){
-          segs=[{h:sh.h,r:1.5}];
+      const baseSh=SH[baseSk];
+      let normalSegs=[], otSegs=[];
+
+      if(otFlag){
+        if(!baseSh?.s){
+          // OFF -> DUTY: entire shift is OT at 1.5x
+          otSegs=[{h:sh.h,r:1.5,label:'Off→Duty'}];
+          normalSegs=[];
         } else {
-          // longer shift: extra hours at 1.5, normal hours at configured rate
-          segs=ST.otCfg[sk]?.segs||[{h:sh.h,r:1.0}];
+          // LONGER SHIFT than base (e.g. morning→long morning)
+          // Normal hours = base hours at normal rate from otCfg
+          // Extra hours = (actual - base) at 1.5x
+          const baseH=baseSh.h;
+          const extraH=sh.h-baseH;
+          // Normal portion uses configured segs for the BASE shift
+          const baseCfgSegs=ST.otCfg[baseSk]?.segs||[{h:baseH,r:1.0}];
+          normalSegs=baseCfgSegs.map(s=>({...s,label:'Normal'}));
+          if(extraH>0){
+            otSegs=[{h:extraH,r:1.5,label:'Extra (OT)'}];
+          }
         }
       } else {
-        segs=ST.otCfg[sk]?.segs||[{h:sh.h,r:1.0}];
+        normalSegs=ST.otCfg[sk]?.segs||[{h:sh.h,r:1.0}];
       }
-      const dayH=segs.reduce((a,s)=>a+s.h,0);
-      const dayPay=segs.reduce((a,s)=>a+s.h*rate*s.r,0);
+
+      const allSegs=[...normalSegs,...otSegs];
+      const dayH=allSegs.reduce((a,s)=>a+s.h,0);
+      const dayPay=allSegs.reduce((a,s)=>a+s.h*rate*s.r,0);
+      const dayOtH=otSegs.reduce((a,s)=>a+s.h,0);
+      const dayOtPay=otSegs.reduce((a,s)=>a+s.h*rate*s.r,0);
       totalH+=dayH;totalPay+=dayPay;
-      if(ot){otH+=dayH;otPay+=dayPay;}
-      days.push({ds,sk,sh,segs,dayH,dayPay,isOT:ot,baseSk});
+      if(otFlag){otH+=dayOtH;otPay+=dayOtPay;}
+      days.push({ds,sk,sh,segs:allSegs,otSegs,normalSegs,dayH,dayOtH,dayPay,isOT:otFlag,baseSk});
     }
     cur=aD(cur,1);
   }
@@ -620,7 +657,7 @@ function mkCell(date,other,tds){
   else if(hl==='b')cell.classList.add('hb');
   else cell.style.background=bg;
 
-  if(isOvr&&!hl)cell.style.borderColor=col;
+  if(hasNote)cell.style.borderColor=col; // border only when note exists
   if(isTp&&!hl&&!isOvr)cell.style.outline='1px solid rgba(251,191,36,0.25)';
 
   if(!other)cell.onclick=()=>openDaySheet(ds);
@@ -872,13 +909,30 @@ function tryOpenClock(time){
 // ── SETTINGS ──────────────────────────────────────────────────────────────────
 function loadSettings(){
   document.getElementById('csInput').value=ST.cs;
-  document.getElementById('otRate').value=ST.otRate||12;
+  document.getElementById('otRate').value=ST.otRate||0.317;
+  const curr=ST.otCurr||'BHD';
+  const sel=document.getElementById('otCurr');
+  if(sel)sel.value=curr;
+  const sym=document.getElementById('currSymbol');
+  if(sym)sym.textContent=getCurrSymbol(curr);
   document.getElementById('yr').textContent=new Date().getFullYear();
   renderOTCfg();renderAlmCfg();
 }
 function savCS(v){ST.cs=v;savST();render();}
-function saveOT(){ST.otRate=parseFloat(document.getElementById('otRate').value)||12;savST();}
+function saveOT(){ST.otRate=parseFloat(document.getElementById('otRate').value)||0.317;savST();}
+function saveCurr(){
+  const v=document.getElementById('otCurr').value;
+  ST.otCurr=v;
+  const sym=document.getElementById('currSymbol');
+  if(sym)sym.textContent=getCurrSymbol(v);
+  savST();
+}
+function getCurrSymbol(c){
+  const map={BHD:'BD',USD:'$',GBP:'£',EUR:'€',AED:'AED',SAR:'SR',KWD:'KD',QAR:'QR',OMR:'OMR',EGP:'E£',JOD:'JD',INR:'₹',PKR:'₨',PHP:'₱',CAD:'CA$',AUD:'A$'};
+  return map[c]||c;
+}
 
+// renderOTCfg unchanged
 function renderOTCfg(){
   const c=document.getElementById('otCfgSection');if(!c)return;
   const workShifts=Object.entries(SH).filter(([,s])=>s.s);
@@ -990,6 +1044,7 @@ function refreshOT(){
   const r=document.getElementById('otResult');if(!r)return;
 
   const rate=res.rate;
+  const curr=getCurrSymbol(ST.otCurr||'BHD');
   const hasOT=res.otH>0;
 
   let html=`
@@ -1012,7 +1067,7 @@ function refreshOT(){
   html+=`<div style="background:var(--s1);border-radius:12px;overflow:hidden;margin-bottom:12px">`;
   Object.entries(byType).forEach(([sk,data])=>{
     const sh=SH[sk];const col=SC[sk];const bg=SBG[sk];
-    const segStr=data.segs.map(seg=>`${seg.h}h@${seg.r}x`).join(' + ');
+    const segStr=data.segs.map(seg=>`${seg.h}h×${seg.r}x${seg.label?'('+seg.label+')':''}`).join(' + ');
     html+=`<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--bd)">
       <div style="font-size:22px">${sh.e}</div>
       <div style="flex:1">
