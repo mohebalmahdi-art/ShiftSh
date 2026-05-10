@@ -665,21 +665,24 @@ function calcOT(startDs, endDs){
 
       const allSegs=[...normalSegs,...otSegs];
       const dayH=allSegs.reduce((a,s)=>a+s.h,0);
-      const dayPay=allSegs.reduce((a,s)=>a+s.h*rate*s.r,0);
+      // Only count pay for OT segments — normal duty pay is not counted
       const dayOtH=otSegs.reduce((a,s)=>a+s.h,0);
       const dayOtPay=otSegs.reduce((a,s)=>a+s.h*rate*s.r,0);
+      // dayPay = OT pay only (normal duty = 0 in this counter)
+      const dayPay=dayOtPay;
       totalH+=dayH;totalPay+=dayPay;
       if(otFlag){otH+=dayOtH;otPay+=dayOtPay;}
-      // Public holiday: entire duty counted at 1.5x regardless of normal/OT
+      // Public holiday: full shift at 1.5x (independent of OT calc)
       const isPH=!!ST.ph[ds];
       let phPay2=0;
       if(isPH&&sh.s){
         phPay2=sh.h*rate*1.5;
         phH+=sh.h;phPay+=phPay2;
-        // Override pay to PH rate
-        totalPay-=dayPay;totalPay+=phPay2;
+        // PH pay replaces normal pay in total
+        totalPay+=phPay2-dayPay;
       }
-      days.push({ds,sk,sh,segs:allSegs,otSegs,normalSegs,dayH,dayOtH,dayPay:isPH?phPay2:dayPay,dayOtPay,isOT:otFlag,isPH,phPay:phPay2,baseSk});
+      days.push({ds,sk,sh,segs:allSegs,otSegs,normalSegs,dayH,dayOtH,
+        dayPay:isPH?phPay2:dayPay,dayOtPay,isOT:otFlag,isPH,phPay:phPay2,baseSk});
     }
     cur=aD(cur,1);
   }
@@ -841,7 +844,7 @@ function openDaySheet(ds){
   const DN=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   document.getElementById('dayT').textContent=`${DN[d.getDay()]}, ${d.toLocaleDateString('en-GB',{day:'numeric',month:'long'})}`;
   editSk=getShift(ds);
-  renderSG('shGrid',editSk,k=>{editSk=k;renderSG('shGrid',k,k2=>{editSk=k2;});});
+  renderSG('shGrid',editSk,function(k){editSk=k;});
   document.getElementById('dayNote').value=ST.nt[ds]||'';
   editHL=ST.hl[ds]||'';updateHL(editHL);
   document.getElementById('rFrom').value=ds;document.getElementById('rTo').value=ds;
@@ -902,12 +905,35 @@ function setManualOT(v){
 }
 
 function renderSG(gId,cur,onSel){
-  const g=document.getElementById(gId);g.innerHTML='';
-  Object.entries(SH).forEach(([k,s])=>{
-    const el=document.createElement('div');el.className='so'+(k===cur?' sl':'');
-    el.style.background=SBG[k]||'#111118';el.style.color=SC[k]||'#4B5563';
-    el.innerHTML=`<div class="oe">${s.e}</div><div class="on">${s.n}</div><div class="ot2">${s.s?`${s.s}\u2013${s.f}`:'No shift'}</div>`;
-    el.onclick=()=>onSel(k);g.appendChild(el);
+  const g=document.getElementById(gId);if(!g)return;
+  g.innerHTML='';
+  Object.entries(SH).forEach(function(entry){
+    const k=entry[0],s=entry[1];
+    const el=document.createElement('div');
+    el.className='so'+(k===cur?' sl':'');
+    el.style.background=SBG[k]||'#111118';
+    el.style.color=SC[k]||'#4B5563';
+    el.innerHTML='<div class="oe">'+s.e+'</div><div class="on">'+s.n+'</div><div class="ot2">'+(s.s?s.s+'–'+s.f:'No shift')+'</div>';
+    el.onclick=function(){
+      editSk=k;
+      // Re-render grid with new selection
+      renderSG(gId,k,onSel);
+      // Update OT row description based on new shift
+      if(editDs){
+        const base=getBaseShift(editDs);
+        const otRow=document.getElementById('otToggleRow');
+        const otDesc=document.getElementById('otToggleDesc');
+        if(SH[k]?.s){
+          if(otRow)otRow.style.display='block';
+          const autoDesc=!SH[base]?.s?'Auto: Off→Duty (will count as OT)':
+            SH[k].h>(SH[base]?.h||0)?'Longer shift — set OT below if needed':'Normal duty (no auto OT)';
+          if(otDesc)otDesc.textContent=autoDesc;
+        } else {
+          if(otRow)otRow.style.display='none';
+        }
+      }
+    };
+    g.appendChild(el);
   });
 }
 
@@ -922,7 +948,30 @@ function applyOv(){
   const note=document.getElementById('dayNote').value.trim();
   const otSel=document.getElementById('otManualSel');
   const otVal=otSel?otSel.value:'auto';
-  const apR=(f,t)=>{let c=new Date(f);while(c<=t){const ds2=dk(c);ST.ov[ds2]=editSk;if(editHL)ST.hl[ds2]=editHL;else delete ST.hl[ds2];if(note)ST.nt[ds2]=note;else delete ST.nt[ds2];if(otVal==='yes')ST.manualOT[ds2]=true;else if(otVal==='no')ST.manualOT[ds2]=false;else delete ST.manualOT[ds2];c=aD(c,1);}};
+  const apR=(f,t)=>{
+    let cur2=new Date(f);
+    while(cur2<=t){
+      const ds2=dk(cur2);
+      const base2=getBaseShift(ds2);
+      ST.ov[ds2]=editSk;
+      if(editHL)ST.hl[ds2]=editHL;else delete ST.hl[ds2];
+      if(note)ST.nt[ds2]=note;else delete ST.nt[ds2];
+      // OT: explicit override wins; otherwise auto-set if off->duty
+      if(otVal==='yes'){
+        ST.manualOT[ds2]=true;
+      } else if(otVal==='no'){
+        ST.manualOT[ds2]=false;
+      } else {
+        // Auto: if base was off and new shift is duty -> mark OT
+        if(!SH[base2]?.s && SH[editSk]?.s){
+          ST.manualOT[ds2]=true;
+        } else {
+          delete ST.manualOT[ds2];
+        }
+      }
+      cur2=aD(cur2,1);
+    }
+  };
   apR(from,to);
   if(repOn){let anc=new Date(from);const sp=to-from;for(let i=1;i<reOc;i++){if(unit==='day')anc=aD(anc,reEv);else if(unit==='week')anc=aD(anc,reEv*7);else{anc=new Date(anc);anc.setMonth(anc.getMonth()+reEv);}apR(anc,new Date(anc.getTime()+sp));}}
   savST();selDay=null;render();closeOv('dayOv');
