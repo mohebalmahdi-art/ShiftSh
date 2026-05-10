@@ -638,7 +638,10 @@ function showTab(t){
   var calIds=['cgr','todayStrip','syncBar','leg'];
   var wd=document.querySelector('.wdr');
   ['nCal','nOT','nSet'].forEach(function(id){document.getElementById(id).classList.remove('on');});
-  document.getElementById('n'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('on');
+  // Map tab names to element IDs
+  var tabIdMap={cal:'nCal',ot:'nOT',set:'nSet'};
+  var activeId=tabIdMap[t];
+  if(activeId) document.getElementById(activeId).classList.add('on');
   if(t==='cal'){
     calIds.forEach(function(id){var e=document.getElementById(id);if(e)e.style.display='';});
     wd.style.display='';
