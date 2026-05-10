@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="ShiftCal"/>
@@ -11,973 +11,1051 @@
 <title>ShiftCal</title>
 <style>
 :root{
-  --bg:#0A0A12;--surf:#12121E;--surf2:#1A1A28;--border:#222232;
-  --text:#E8E8F8;--muted:#5A5A80;
-  --morning:#F59E0B;--morning-bg:#1E1400;
-  --lmorning:#FBBF24;--lmorning-bg:#241A00;
-  --afternoon:#10B981;--afternoon-bg:#001810;
-  --night:#818CF8;--night-bg:#0D0A2A;
-  --lnight:#A78BFA;--lnight-bg:#130A30;
-  --off:#374151;--off-bg:#0F0F14;
-  --sick:#EF4444;--sick-bg:#1A0606;
-  --leave:#06B6D4;--leave-bg:#001820;
-  --training:#A855F7;--training-bg:#180A28;
+  --bg:#0A0A12;--s1:#12121E;--s2:#1A1A28;--bd:#222232;
+  --tx:#E8E8F8;--mu:#5A5A80;
+  --cm:#F59E0B;--cb:#1E1400;
+  --lm:#FBBF24;--lb:#241A00;
+  --ca:#10B981;--ab:#001810;
+  --cn:#818CF8;--nb:#0D0A2A;
+  --cl:#A78BFA;--llb:#130A30;
+  --co:#4B5563;--ob:#111118;
+  --ck:#EF4444;--kb:#1A0606;
+  --cv:#06B6D4;--vb:#001820;
+  --ct:#A855F7;--tb:#180A28;
 }
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:none;}
-
-/* FIXED APP LAYOUT - no browser scrolling */
-html{height:100%;overflow:hidden;position:fixed;width:100%;}
-body{height:100%;overflow:hidden;position:fixed;width:100%;background:var(–bg);color:var(–text);font-family:-apple-system,‘SF Pro Text’,‘Helvetica Neue’,Arial,sans-serif;}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%;}
+html,body{
+  height:100%;width:100%;
+  position:fixed;overflow:hidden;
+  background:#0A0A12;color:#E8E8F8;
+  font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;
+  font-size:16px;
+}
 #app{
-position:fixed;top:0;left:0;right:0;bottom:0;
-display:flex;flex-direction:column;
-padding-top:env(safe-area-inset-top,44px);
-padding-bottom:env(safe-area-inset-bottom,0px);
-background:var(–bg);
+  position:fixed;inset:0;
+  display:flex;flex-direction:column;
+  background:var(--bg);
+  padding-top:max(env(safe-area-inset-top),20px);
 }
-#header{padding:10px 16px 6px;flex-shrink:0;background:var(–bg);}
-#content{flex:1;overflow-y:scroll;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}
-#navbar{
-flex-shrink:0;display:flex;
-padding-bottom:env(safe-area-inset-bottom,0px);
-background:var(–surf);border-top:1px solid var(–border);
+#hdr{flex-shrink:0;padding:8px 14px 6px;background:var(--bg);}
+#cnt{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;}
+#nav{
+  flex-shrink:0;display:flex;
+  background:var(--s1);border-top:1px solid var(--bd);
+  padding-bottom:max(env(safe-area-inset-bottom),8px);
 }
 
-/* HEADER */
-.hrow{display:flex;align-items:center;justify-content:space-between;}
-.mnav{display:flex;align-items:center;gap:10px;}
-.mbtn{width:32px;height:32px;border-radius:50%;border:1px solid var(–border);background:var(–surf);color:var(–text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
-.mtitle{font-size:19px;font-weight:700;}
-.ibtn{width:34px;height:34px;border-radius:10px;border:1px solid var(–border);background:var(–surf);color:var(–text);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+/* NAV TABS */
+.ntb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 2px;background:none;border:none;color:var(–mu);font-family:inherit;font-size:10px;font-weight:600;cursor:pointer;letter-spacing:0.02em;}
+.ntb.on{color:#818CF8;}
+.ntb .ni{font-size:21px;line-height:1;}
 
-/* CALENDAR */
-.wdays{display:grid;grid-template-columns:repeat(7,1fr);padding:2px 8px 0;gap:2px;}
-.wd{text-align:center;font-size:9px;font-weight:700;color:var(–muted);padding:3px 0;text-transform:uppercase;letter-spacing:0.05em;}
-.cgrid{display:grid;grid-template-columns:repeat(7,1fr);padding:2px 8px;gap:3px;}
-.cday{
-border-radius:10px;padding:3px 2px 5px;cursor:pointer;
+/* HEADER ROW */
+.hr{display:flex;align-items:center;justify-content:space-between;}
+.mnv{display:flex;align-items:center;gap:10px;}
+.mb{width:32px;height:32px;border-radius:50%;border:1px solid var(–bd);background:var(–s1);color:var(–tx);font-size:19px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.mt{font-size:19px;font-weight:700;letter-spacing:-0.02em;}
+.ib{width:34px;height:34px;border-radius:10px;border:1px solid var(–bd);background:var(–s1);color:var(–tx);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+
+/* WEEKDAYS */
+.wdr{display:grid;grid-template-columns:repeat(7,1fr);padding:2px 8px 0;}
+.wd{text-align:center;font-size:9px;font-weight:700;color:var(–mu);padding:3px 0;text-transform:uppercase;letter-spacing:.05em;}
+
+/* CALENDAR GRID */
+.cgr{display:grid;grid-template-columns:repeat(7,1fr);padding:2px 8px 6px;gap:2px;}
+.cd{
+border-radius:9px;padding:3px 1px 4px;
 display:flex;flex-direction:column;align-items:center;gap:1px;
-min-height:54px;border:2px solid transparent;position:relative;
-transition:border-color 0.15s;
+min-height:52px;border:2px solid transparent;
+position:relative;cursor:pointer;
+transition:border-color .12s;
 }
-.cday.selected{border-color:#ffffff !important;box-shadow:0 0 0 1px rgba(255,255,255,0.3);}
-.cday.other{opacity:0.25;pointer-events:none;}
-.cday.today .dnum{background:var(–text);color:var(–bg);border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-weight:800;}
-.cday.override{border-style:solid;}
-.cday.hasNote::after{content:’’;position:absolute;top:3px;left:3px;width:5px;height:5px;border-radius:50%;background:#FBBF24;}
-.cday.highlighted{box-shadow:inset 0 0 0 2px rgba(255,213,0,0.5);}
-.dnum{font-size:12px;font-weight:600;width:20px;height:20px;display:flex;align-items:center;justify-content:center;}
-.demoji{font-size:12px;line-height:1;}
-.dalarm{font-size:7px;color:var(–muted);font-family:‘Courier New’,monospace;line-height:1.3;text-align:center;}
+.cd:active{transform:scale(0.95);}
+.cd.xo{opacity:.2;pointer-events:none;}
+.cd.sel{border-color:#fff !important;box-shadow:0 0 0 1px rgba(255,255,255,.25);}
+.cd.tod .dn{background:#E8E8F8;color:#0A0A12;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-weight:800;}
+.cd.ovr{border-style:solid;}
+.cd.ot{/* overtime */}
+.cd.ot::before{content:’$’;position:absolute;top:2px;right:3px;font-size:8px;font-weight:700;color:#FBBF24;}
+.cd.hn::after{content:’’;position:absolute;top:3px;left:3px;width:5px;height:5px;border-radius:50%;background:#FBBF24;}
+.dn{font-size:12px;font-weight:600;width:20px;height:20px;display:flex;align-items:center;justify-content:center;}
+.de{font-size:12px;line-height:1;}
+.da{font-size:7px;color:var(–mu);font-family:‘Courier New’,monospace;line-height:1.2;text-align:center;}
+
+/* HIGHLIGHT BG */
+.hy{background:rgba(251,191,36,.18) !important;}
+.hr2{background:rgba(239,68,68,.18) !important;}
+.hg{background:rgba(16,185,129,.18) !important;}
+.hb{background:rgba(129,140,248,.18) !important;}
 
 /* TODAY STRIP */
-.tstrip{margin:6px 12px;padding:12px 14px;border-radius:14px;display:flex;align-items:center;gap:12px;cursor:pointer;flex-shrink:0;}
+.ts{margin:6px 12px;padding:12px 14px;border-radius:14px;display:flex;align-items:center;gap:12px;cursor:pointer;}
 
 /* SYNC BANNER */
-.sbanner{margin:0 12px 6px;padding:10px 14px;border-radius:11px;display:flex;align-items:center;gap:10px;cursor:pointer;}
-.sdot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-
-/* NAV */
-.nbtn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 4px;cursor:pointer;background:none;border:none;color:var(–muted);font-family:inherit;font-size:10px;font-weight:500;}
-.nbtn.active{color:#818CF8;}
-.nbtn span:first-child{font-size:20px;}
-
-/* OVERLAY / SHEET */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:200;display:none;align-items:flex-end;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);}
-.overlay.open{display:flex;}
-.sheet{
-background:var(–surf);border-radius:22px 22px 0 0;width:100%;
-padding:0 0 calc(20px + env(safe-area-inset-bottom,0px));
-max-height:88vh;overflow-y:scroll;-webkit-overflow-scrolling:touch;
-animation:sup 0.28s ease;
-}
-@keyframes sup{from{transform:translateY(100%)}to{transform:translateY(0)}}
-.shandle{width:36px;height:4px;background:var(–border);border-radius:2px;margin:10px auto 0;}
-.stitle{font-size:17px;font-weight:700;padding:14px 18px 10px;}
-.sp{padding:0 18px 14px;}
-
-/* SHIFT GRID */
-.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-.sopt{border-radius:13px;padding:11px 10px;cursor:pointer;border:2px solid transparent;display:flex;flex-direction:column;gap:3px;transition:border-color 0.15s;}
-.sopt.sel{border-color:currentColor;}
-.sopt .oe{font-size:20px;}
-.sopt .on{font-size:13px;font-weight:700;}
-.sopt .ot{font-size:10px;opacity:0.65;font-family:‘Courier New’,monospace;}
-
-/* FORM ELEMENTS */
-input[type=date],input[type=time],input[type=text],input[type=number],select,textarea{
-background:var(–surf2);border:1px solid var(–border);color:var(–text);
-border-radius:8px;padding:9px 11px;font-family:inherit;font-size:14px;outline:none;width:100%;
--webkit-appearance:none;
-}
-textarea{resize:none;min-height:70px;line-height:1.5;}
-input[type=time]{width:auto;}
-
-/* BUTTONS */
-.btn{width:100%;padding:13px;border-radius:13px;border:none;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;margin-top:7px;}
-.btnp{background:linear-gradient(135deg,#6366F1,#10B981);color:white;}
-.btns{background:var(–surf2);border:1px solid var(–border)!important;color:var(–text);}
-.btnd{background:var(–sick-bg);border:1px solid var(–sick)!important;color:var(–sick);}
-
-/* SETTINGS */
-.scard{background:var(–surf);border-radius:14px;margin-bottom:12px;overflow:hidden;}
-.srow{display:flex;align-items:center;justify-content:space-between;padding:12px 15px;border-bottom:1px solid var(–border);cursor:pointer;}
-.srow:last-child{border-bottom:none;}
-.slbl{font-size:14px;font-weight:500;}
-.ssub{font-size:12px;color:var(–muted);margin-top:1px;}
-.sectitle{font-size:11px;font-weight:700;color:var(–muted);letter-spacing:0.08em;text-transform:uppercase;margin:13px 0 6px;}
-
-/* TOGGLE */
-.tog{width:42px;height:25px;border-radius:13px;background:var(–border);position:relative;cursor:pointer;transition:background 0.2s;flex-shrink:0;}
-.tog.on{background:#818CF8;}
-.tog::after{content:’’;position:absolute;top:2.5px;left:2.5px;width:20px;height:20px;border-radius:50%;background:white;transition:left 0.2s;}
-.tog.on::after{left:19.5px;}
-
-/* STEPPER */
-.stpr{display:flex;align-items:center;gap:10px;}
-.stpb{width:28px;height:28px;border-radius:50%;border:1px solid var(–border);background:var(–surf2);color:var(–text);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
-.stpv{font-size:14px;font-weight:700;min-width:26px;text-align:center;}
-
-/* PATTERN DAYS */
-.pdays{display:flex;gap:5px;flex-wrap:wrap;margin:8px 0;}
-.pday{width:40px;height:50px;border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;border:2px solid var(–border);background:var(–surf2);}
-.pday .pdn{font-size:10px;font-weight:700;color:var(–muted);}
-.pday .pde{font-size:15px;}
-
-/* ALARM CONFIG */
-.acrd{border-radius:13px;padding:13px;margin-bottom:9px;}
-.alrow{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;}
-.altag{background:var(–surf);border-radius:7px;padding:5px 9px;display:flex;flex-direction:column;gap:1px;border:1px solid var(–border);}
-
-/* TEMP PERIOD */
-.tpitem{background:var(–surf2);border-radius:11px;padding:11px 13px;margin-bottom:7px;border-left:3px solid #FBBF24;}
-
-/* ALARM POPUP */
-.almpop{background:var(–surf);border-radius:16px;padding:20px;margin:20px;border:1px solid var(–border);}
-.almpop h3{font-size:17px;font-weight:700;margin-bottom:4px;}
-.almpop .sub{font-size:13px;color:var(–muted);margin-bottom:16px;}
-.almline{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(–border);}
-.almline:last-of-type{border-bottom:none;}
-.almnum{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white;flex-shrink:0;}
-
-/* NOTES */
-.noterow{display:flex;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(–border);margin-top:10px;}
-.notedot{width:8px;height:8px;border-radius:50%;background:#FBBF24;flex-shrink:0;}
+.sb{margin:0 12px 5px;padding:9px 14px;border-radius:11px;display:flex;align-items:center;gap:10px;cursor:pointer;}
+.sd{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 
 /* LEGEND */
-.legend{display:flex;flex-wrap:wrap;gap:7px;padding:3px 12px 7px;}
-.legitem{display:flex;align-items:center;gap:4px;font-size:10px;color:var(–muted);}
-.legdot{width:7px;height:7px;border-radius:50%;}
+.leg{display:flex;flex-wrap:wrap;gap:6px;padding:2px 12px 7px;}
+.li{display:flex;align-items:center;gap:4px;font-size:10px;color:var(–mu);}
+.ld{width:7px;height:7px;border-radius:50%;}
 
-/* HIGHLIGHT COLORS */
-.hl-yellow{background:rgba(251,191,36,0.15)!important;}
-.hl-red{background:rgba(239,68,68,0.15)!important;}
-.hl-green{background:rgba(16,185,129,0.15)!important;}
-.hl-blue{background:rgba(99,102,241,0.15)!important;}
+/* OVERLAY + SHEET */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:300;display:none;align-items:flex-end;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);}
+.ov.op{display:flex;}
+.sh{
+background:var(–s1);border-radius:22px 22px 0 0;width:100%;
+padding:0 0 calc(20px + max(env(safe-area-inset-bottom),10px));
+max-height:90vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+animation:su .25s ease;
+}
+@keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.shh{width:36px;height:4px;background:var(–bd);border-radius:2px;margin:10px auto 0;}
+.sht{font-size:17px;font-weight:700;padding:13px 18px 9px;}
+.shs{padding:0 18px 12px;}
+
+/* SHIFT OPTS */
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.so{border-radius:12px;padding:10px 9px;cursor:pointer;border:2px solid transparent;display:flex;flex-direction:column;gap:2px;}
+.so.sl{border-color:currentColor !important;}
+.so .oe{font-size:19px;}
+.so .on{font-size:13px;font-weight:700;}
+.so .ot2{font-size:10px;opacity:.65;font-family:‘Courier New’,monospace;}
+
+/* INPUTS */
+input,select,textarea{
+background:var(–s2);border:1px solid var(–bd);color:var(–tx);
+border-radius:8px;padding:9px 11px;font-family:inherit;font-size:14px;
+outline:none;width:100%;-webkit-appearance:none;
+}
+textarea{resize:none;min-height:65px;line-height:1.5;}
+input[type=time],input[type=number]{width:auto;}
+input[type=number]{width:80px;text-align:center;}
+
+/* BUTTONS */
+.btn{width:100%;padding:13px;border-radius:13px;border:none;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;margin-top:7px;display:block;}
+.bp{background:linear-gradient(135deg,#6366F1,#10B981);color:#fff;}
+.bs{background:var(–s2);border:1px solid var(–bd) !important;color:var(–tx);}
+.bd2{background:var(–kb);border:1px solid var(–ck) !important;color:var(–ck);}
+
+/* SETTINGS */
+.sc{background:var(–s1);border-radius:14px;margin-bottom:12px;overflow:hidden;}
+.sr{display:flex;align-items:center;justify-content:space-between;padding:12px 15px;border-bottom:1px solid var(–bd);}
+.sr:last-child{border-bottom:none;}
+.sl2{font-size:14px;font-weight:500;}
+.ss{font-size:12px;color:var(–mu);margin-top:1px;}
+.sct{font-size:11px;font-weight:700;color:var(–mu);letter-spacing:.08em;text-transform:uppercase;margin:13px 0 6px;}
+
+/* TOGGLE */
+.tg{width:42px;height:25px;border-radius:13px;background:var(–bd);position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;}
+.tg.on{background:#818CF8;}
+.tg::after{content:’’;position:absolute;top:2.5px;left:2.5px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .2s;}
+.tg.on::after{left:19.5px;}
+
+/* STEPPER */
+.stp{display:flex;align-items:center;gap:8px;}
+.stb{width:28px;height:28px;border-radius:50%;border:1px solid var(–bd);background:var(–s2);color:var(–tx);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.stv{font-size:14px;font-weight:700;min-width:24px;text-align:center;}
+
+/* PATTERN DAYS */
+.pd{display:flex;gap:5px;flex-wrap:wrap;margin:8px 0;}
+.pdi{width:40px;height:50px;border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;border:2px solid var(–bd);background:var(–s2);}
+.pdi .pdn{font-size:10px;font-weight:700;}
+.pdi .pde{font-size:14px;}
+
+/* ALARM CARD */
+.ac{border-radius:12px;padding:12px;margin-bottom:9px;}
+.atg{background:var(–s1);border-radius:7px;padding:5px 9px;display:flex;flex-direction:column;gap:1px;border:1px solid var(–bd);}
+
+/* ALARM LINES */
+.aln{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(–bd);}
+.aln:last-of-type{border-bottom:none;}
+.anm{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;}
+
+/* TEMP PERIOD */
+.tp{background:var(–s2);border-radius:11px;padding:11px 13px;margin-bottom:7px;border-left:3px solid #FBBF24;}
+
+/* OVERTIME */
+.otcard{background:var(–s2);border-radius:14px;padding:14px;margin-bottom:10px;}
+.otrow{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(–bd);}
+.otrow:last-child{border-bottom:none;}
+.otsec{font-size:11px;font-weight:700;color:var(–mu);letter-spacing:.08em;text-transform:uppercase;padding:8px 0 4px;}
+.otsum{background:linear-gradient(135deg,#1E1400,#0D0A2A);border:1px solid #FBBF24;border-radius:14px;padding:16px;margin:8px 0;text-align:center;}
 </style>
 
 </head>
 <body>
 <div id="app">
-  <div id="header">
-    <div class="hrow">
-      <div class="mnav">
-        <button class="mbtn" id="prevBtn">&#8249;</button>
-        <div class="mtitle" id="mTitle"></div>
-        <button class="mbtn" id="nextBtn">&#8250;</button>
+  <div id="hdr">
+    <div class="hr">
+      <div class="mnv">
+        <button class="mb" id="prevBtn">&#8249;</button>
+        <div class="mt" id="mTitle"></div>
+        <button class="mb" id="nextBtn">&#8250;</button>
       </div>
       <div style="display:flex;gap:7px">
-        <button class="ibtn" id="todayBtn" title="Today">&#9678;</button>
-        <button class="ibtn" id="patBtn" title="Pattern">&#9881;</button>
+        <button class="ib" id="todayBtn">&#9678;</button>
+        <button class="ib" id="patBtn">&#9881;</button>
       </div>
     </div>
   </div>
 
-  <div id="content">
+  <div id="cnt">
     <div id="todayStrip"></div>
-    <div id="syncBanner"></div>
-    <div class="legend" id="legend"></div>
-    <div class="wdays"><div class="wd">Sun</div><div class="wd">Mon</div><div class="wd">Tue</div><div class="wd">Wed</div><div class="wd">Thu</div><div class="wd">Fri</div><div class="wd">Sat</div></div>
-    <div class="cgrid" id="calGrid"></div>
+    <div id="syncBar"></div>
+    <div class="leg" id="leg"></div>
+    <div class="wdr"><div class="wd">Sun</div><div class="wd">Mon</div><div class="wd">Tue</div><div class="wd">Wed</div><div class="wd">Thu</div><div class="wd">Fri</div><div class="wd">Sat</div></div>
+    <div class="cgr" id="cgr"></div>
 
 ```
 <!-- SETTINGS PAGE -->
-<div id="settingsPage" style="display:none;padding:14px">
+<div id="setPage" style="display:none;padding:14px">
 
   <div style="background:linear-gradient(135deg,#0D0A2A,#1E1400);border:1px solid #818CF8;border-radius:14px;padding:14px;margin-bottom:12px;">
-    <div style="font-size:14px;font-weight:700;color:#818CF8;margin-bottom:8px;">&#128242; Install as iPhone App</div>
-    <div style="font-size:13px;color:#A0A0C0;line-height:1.8;">
-      <strong style="color:#E8E8F8;">Via GitHub Pages (free):</strong><br/>
-      1. Create account at <strong>github.com</strong><br/>
+    <div style="font-size:14px;font-weight:700;color:#818CF8;margin-bottom:6px">&#128242; Install on iPhone</div>
+    <div style="font-size:13px;color:#A0A0C0;line-height:1.8">
+      1. Go to <strong>github.com</strong> → free account<br/>
       2. New repo → upload this file → Settings → Pages<br/>
-      3. Open your GitHub Pages URL in Safari<br/>
-      4. Share &#8593; → Add to Home Screen &#10003;<br/><br/>
-      <strong style="color:#E8E8F8;">Or use via Claude anytime</strong> — all data saves here.
+      3. Open your GitHub Pages URL in <strong>Safari</strong><br/>
+      4. Share &#8593; → <strong>Add to Home Screen</strong> &#10003;
     </div>
   </div>
 
-  <div class="sectitle">Cycle Start Date</div>
-  <div class="scard">
-    <div class="srow" style="cursor:default">
-      <div><div class="slbl">Pattern Start</div><div class="ssub">Day 1 of your rotating cycle</div></div>
-      <input type="date" id="cycleStartInput" style="width:auto" onchange="saveCycleStart(this.value)"/>
+  <div class="sct">Cycle Start Date</div>
+  <div class="sc">
+    <div class="sr" style="cursor:default">
+      <div><div class="sl2">Pattern Start</div><div class="ss">Day 1 of your rotating cycle</div></div>
+      <input type="date" id="csInput" style="width:auto" onchange="savCS(this.value)"/>
     </div>
   </div>
 
-  <div class="sectitle">Alarms per Shift</div>
-  <div id="alarmConfigSection"></div>
-
-  <div class="sectitle">Calendar &amp; Alarm Sync</div>
-  <div class="scard">
-    <div class="srow" id="syncRow">
-      <div><div class="slbl">&#9889; Shortcuts Script</div><div class="ssub">Auto alarm + calendar nightly</div></div>
-      <span style="color:var(--muted)">&#8250;</span>
-    </div>
-    <div class="srow" id="exportRow">
-      <div><div class="slbl">&#128228; Export 12 Months (.ics)</div><div class="ssub">Import into iPhone Calendar</div></div>
-      <span style="color:var(--muted)">&#8250;</span>
+  <div class="sct">Overtime Settings</div>
+  <div class="sc">
+    <div class="sr" style="cursor:default">
+      <div><div class="sl2">Hourly Rate</div><div class="ss">Your base pay per hour</div></div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:13px;color:var(--mu)">£</span>
+        <input type="number" id="otRate" min="0" step="0.5" value="12" onchange="saveOT()" style="width:70px"/>
+      </div>
     </div>
   </div>
 
-  <div class="sectitle">Temporary Period Patterns</div>
-  <div id="tempPeriodList"></div>
-  <button class="btn btns" onclick="openTpSheet(null)" style="margin-top:4px">+ Add Temporary Period Pattern</button>
+  <div style="font-size:13px;color:var(--mu);margin-bottom:8px;line-height:1.6">
+    Configure how each shift type is calculated for overtime. Set the hours and multiplier (1.0 = normal, 1.25 = time+quarter, 1.5 = time+half, 2.0 = double time). You can split a shift into segments with different rates.
+  </div>
+  <div id="otCfgSection"></div>
 
-  <div class="sectitle">Reset</div>
-  <div class="scard">
-    <div class="srow" onclick="resetOverrides()"><div class="slbl" style="color:var(--sick)">Clear All Day Overrides</div></div>
-    <div class="srow" onclick="resetAll()"><div class="slbl" style="color:var(--sick)">Full Reset</div></div>
+  <div class="sct">Alarms per Shift</div>
+  <div id="almCfgSection"></div>
+
+  <div class="sct">Calendar &amp; Sync</div>
+  <div class="sc">
+    <div class="sr" id="syncRow"><div><div class="sl2">&#9889; Shortcuts Script</div><div class="ss">Auto alarm nightly</div></div><span style="color:var(--mu)">&#8250;</span></div>
+    <div class="sr" id="exportRow"><div><div class="sl2">&#128228; Export 12 months (.ics)</div><div class="ss">Import into iPhone Calendar</div></div><span style="color:var(--mu)">&#8250;</span></div>
   </div>
 
-  <div style="text-align:center;padding:16px 0;font-size:11px;color:#3A3A55;">
+  <div class="sct">Temporary Period Patterns</div>
+  <div id="tpList"></div>
+  <button class="btn bs" onclick="openTpSheet(null)" style="margin-top:4px">+ Add Temporary Period Pattern</button>
+
+  <div class="sct">Reset</div>
+  <div class="sc">
+    <div class="sr" onclick="resetOv()"><div class="sl2" style="color:var(--ck)">Clear All Overrides &amp; Notes</div></div>
+    <div class="sr" onclick="resetAll()"><div class="sl2" style="color:var(--ck)">Full Reset</div></div>
+  </div>
+
+  <div style="text-align:center;padding:16px 0;font-size:11px;color:#3A3A55">
     &copy; <span id="yr"></span> Sayed Baqer Alseb3 Limited. All rights reserved.
   </div>
+</div>
+
+<!-- OVERTIME PAGE -->
+<div id="otPage" style="display:none;padding:14px">
+  <div id="otContent"></div>
 </div>
 ```
 
   </div>
 
-  <div id="navbar">
-    <button class="nbtn active" id="navCal" onclick="switchTab('cal')"><span>&#128197;</span><span>Calendar</span></button>
-    <button class="nbtn" id="navSet" onclick="switchTab('set')"><span>&#9881;&#65039;</span><span>Settings</span></button>
+  <div id="nav">
+    <button class="ntb on" id="nCal" onclick="showTab('cal')"><span class="ni">&#128197;</span>Calendar</button>
+    <button class="ntb" id="nOT" onclick="showTab('ot')"><span class="ni">&#128181;</span>Overtime</button>
+    <button class="ntb" id="nSet" onclick="showTab('set')"><span class="ni">&#9881;&#65039;</span>Settings</button>
   </div>
 </div>
 
 <!-- DAY SHEET -->
 
-<div class="overlay" id="daySheet">
-  <div class="sheet" id="daySheetInner">
-    <div class="shandle"></div>
-    <div class="stitle" id="daySheetTitle">Edit Day</div>
-    <div class="sp">
-      <!-- Shift picker -->
-      <div class="sgrid" id="shiftGrid"></div>
-
-```
-  <!-- Highlight -->
-  <div style="margin-top:14px;margin-bottom:6px;font-size:12px;font-weight:700;color:var(--muted);letter-spacing:0.07em;text-transform:uppercase;">Highlight</div>
-  <div style="display:flex;gap:8px;margin-bottom:2px;">
-    <div id="hl-none"  onclick="setHL('')"       style="width:32px;height:32px;border-radius:8px;background:var(--surf2);border:2px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;">&#10005;</div>
-    <div id="hl-yellow" onclick="setHL('yellow')" style="width:32px;height:32px;border-radius:8px;background:#FBBF24;border:2px solid transparent;cursor:pointer;"></div>
-    <div id="hl-red"    onclick="setHL('red')"    style="width:32px;height:32px;border-radius:8px;background:#EF4444;border:2px solid transparent;cursor:pointer;"></div>
-    <div id="hl-green"  onclick="setHL('green')"  style="width:32px;height:32px;border-radius:8px;background:#10B981;border:2px solid transparent;cursor:pointer;"></div>
-    <div id="hl-blue"   onclick="setHL('blue')"   style="width:32px;height:32px;border-radius:8px;background:#818CF8;border:2px solid transparent;cursor:pointer;"></div>
-  </div>
-
-  <!-- Note -->
-  <div style="margin-top:14px;margin-bottom:6px;font-size:12px;font-weight:700;color:var(--muted);letter-spacing:0.07em;text-transform:uppercase;">Note</div>
-  <textarea id="dayNote" placeholder="Add a note for this day..."></textarea>
-
-  <!-- Date range -->
-  <div style="margin-top:14px;margin-bottom:8px;font-size:12px;font-weight:700;color:var(--muted);letter-spacing:0.07em;text-transform:uppercase;">Apply to date range</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-    <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">From</div><input type="date" id="rangeFrom"/></div>
-    <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">To</div><input type="date" id="rangeTo"/></div>
-  </div>
-
-  <!-- Repeat -->
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--border);">
-    <div><div style="font-size:14px;font-weight:500">Repeat override</div><div style="font-size:12px;color:var(--muted);margin-top:2px">e.g. training every week ×4</div></div>
-    <div class="tog" id="repeatTog" onclick="toggleRepeat()"></div>
-  </div>
-  <div id="repeatOpts" style="display:none;padding-top:6px">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
-      <div style="font-size:14px;font-weight:500">Every</div>
-      <div class="stpr">
-        <button class="stpb" onclick="stepRep(-1)">&#8722;</button>
-        <div class="stpv" id="repEvery">1</div>
-        <button class="stpb" onclick="stepRep(1)">+</button>
-        <select id="repUnit" style="width:auto;padding:7px 9px">
-          <option value="day">Days</option><option value="week" selected>Weeks</option><option value="month">Months</option>
-        </select>
+<div class="ov" id="dayOv">
+<div class="sh" id="daySh">
+  <div class="shh"></div>
+  <div class="sht" id="dayT">Edit Day</div>
+  <div class="shs">
+    <div class="sg" id="shGrid"></div>
+    <div style="margin-top:13px;margin-bottom:5px;font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.07em;text-transform:uppercase">Highlight</div>
+    <div style="display:flex;gap:8px;margin-bottom:2px">
+      <div id="hlN" onclick="setHL('')"       style="width:30px;height:30px;border-radius:8px;background:var(--s2);border:2px solid var(--bd);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;transition:transform .15s">&#10005;</div>
+      <div id="hlY" onclick="setHL('y')" style="width:30px;height:30px;border-radius:8px;background:#FBBF24;border:2px solid transparent;cursor:pointer;transition:transform .15s"></div>
+      <div id="hlR" onclick="setHL('r')" style="width:30px;height:30px;border-radius:8px;background:#EF4444;border:2px solid transparent;cursor:pointer;transition:transform .15s"></div>
+      <div id="hlG" onclick="setHL('g')" style="width:30px;height:30px;border-radius:8px;background:#10B981;border:2px solid transparent;cursor:pointer;transition:transform .15s"></div>
+      <div id="hlB" onclick="setHL('b')" style="width:30px;height:30px;border-radius:8px;background:#818CF8;border:2px solid transparent;cursor:pointer;transition:transform .15s"></div>
+    </div>
+    <div style="margin-top:13px;margin-bottom:5px;font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.07em;text-transform:uppercase">Note</div>
+    <textarea id="dayNote" placeholder="Add a note for this day..."></textarea>
+    <div style="margin-top:13px;margin-bottom:8px;font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.07em;text-transform:uppercase">Apply to date range</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:10px">
+      <div><div style="font-size:12px;color:var(--mu);margin-bottom:3px">From</div><input type="date" id="rFrom"/></div>
+      <div><div style="font-size:12px;color:var(--mu);margin-bottom:3px">To</div><input type="date" id="rTo"/></div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--bd)">
+      <div><div style="font-size:14px;font-weight:500">Repeat override</div><div style="font-size:12px;color:var(--mu);margin-top:1px">e.g. training every week ×4</div></div>
+      <div class="tg" id="repTg" onclick="togRep()"></div>
+    </div>
+    <div id="repOpts" style="display:none;padding-top:5px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bd)">
+        <div style="font-size:14px;font-weight:500">Every</div>
+        <div class="stp">
+          <button class="stb" onclick="stepRe(-1)">&#8722;</button><div class="stv" id="reV">1</div><button class="stb" onclick="stepRe(1)">+</button>
+          <select id="reU" style="width:auto;padding:7px 9px"><option value="day">Days</option><option value="week" selected>Weeks</option><option value="month">Months</option></select>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">
+        <div style="font-size:14px;font-weight:500">Times</div>
+        <div class="stp"><button class="stb" onclick="stepOc(-1)">&#8722;</button><div class="stv" id="ocV">4</div><button class="stb" onclick="stepOc(1)">+</button></div>
       </div>
     </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">
-      <div style="font-size:14px;font-weight:500">Times</div>
-      <div class="stpr">
-        <button class="stpb" onclick="stepOcc(-1)">&#8722;</button>
-        <div class="stpv" id="repOccur">4</div>
-        <button class="stpb" onclick="stepOcc(1)">+</button>
-      </div>
-    </div>
+    <button class="btn bp" onclick="applyOv()">&#10003; Apply</button>
+    <button class="btn bs" onclick="clearOv()">&#10005; Clear Override for Range</button>
+    <button class="btn bs" onclick="closeOv('dayOv')" style="margin-top:4px">Cancel</button>
   </div>
-
-  <button class="btn btnp" onclick="applyOverride()">&#10003; Apply</button>
-  <button class="btn btns" onclick="clearOverride()">&#10005; Clear Override for Range</button>
-  <button class="btn btns" onclick="closeSheet('daySheet')" style="margin-top:4px">Cancel</button>
 </div>
-```
-
-  </div>
 </div>
 
 <!-- PATTERN SHEET -->
 
-<div class="overlay" id="patSheet">
-  <div class="sheet">
-    <div class="shandle"></div>
-    <div class="stitle">Rotating Base Pattern</div>
-    <div class="sp">
-      <div style="font-size:13px;color:var(--muted);margin-bottom:10px">Tap each day to change its shift. Repeats forever.</div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div style="font-size:14px;font-weight:600">Cycle length (days)</div>
-        <div class="stpr">
-          <button class="stpb" onclick="stepCyc(-1)">&#8722;</button>
-          <div class="stpv" id="cycLen">12</div>
-          <button class="stpb" onclick="stepCyc(1)">+</button>
-        </div>
-      </div>
-      <div class="pdays" id="patDays"></div>
-      <button class="btn btnp" onclick="savePattern()">Save Pattern</button>
-      <button class="btn btns" onclick="closeSheet('patSheet')">Cancel</button>
+<div class="ov" id="patOv">
+<div class="sh">
+  <div class="shh"></div>
+  <div class="sht">Rotating Base Pattern</div>
+  <div class="shs">
+    <div style="font-size:13px;color:var(--mu);margin-bottom:10px">Tap each day to set its shift. This repeats forever.</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px">
+      <div style="font-size:14px;font-weight:600">Cycle length (days)</div>
+      <div class="stp"><button class="stb" onclick="stepCy(-1)">&#8722;</button><div class="stv" id="cyLen">12</div><button class="stb" onclick="stepCy(1)">+</button></div>
     </div>
+    <div class="pd" id="patDays"></div>
+    <button class="btn bp" onclick="savePat()">Save Pattern</button>
+    <button class="btn bs" onclick="closeOv('patOv')">Cancel</button>
   </div>
+</div>
 </div>
 
 <!-- TEMP PERIOD SHEET -->
 
-<div class="overlay" id="tpSheet">
-  <div class="sheet">
-    <div class="shandle"></div>
-    <div class="stitle" id="tpSheetTitle">Temporary Period Pattern</div>
-    <div class="sp">
-      <div style="font-size:13px;color:var(--muted);margin-bottom:12px">Override base pattern for a date range with its own repeating cycle.</div>
-      <div style="margin-bottom:10px"><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Name</div><input type="text" id="tpName" placeholder="e.g. Summer Rota"/></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-        <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Start</div><input type="date" id="tpStart"/></div>
-        <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">End</div><input type="date" id="tpEnd"/></div>
-      </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div style="font-size:14px;font-weight:600">Cycle length (days)</div>
-        <div class="stpr">
-          <button class="stpb" onclick="stepTpCyc(-1)">&#8722;</button>
-          <div class="stpv" id="tpCycLen">4</div>
-          <button class="stpb" onclick="stepTpCyc(1)">+</button>
-        </div>
-      </div>
-      <div class="pdays" id="tpPatDays"></div>
-      <button class="btn btnp" onclick="saveTp()">Save Period Pattern</button>
-      <button class="btn btns" onclick="closeSheet('tpSheet')">Cancel</button>
+<div class="ov" id="tpOv">
+<div class="sh">
+  <div class="shh"></div>
+  <div class="sht" id="tpT">Temporary Period Pattern</div>
+  <div class="shs">
+    <div style="font-size:13px;color:var(--mu);margin-bottom:11px">Override base pattern for a date range with its own cycle.</div>
+    <div style="margin-bottom:9px"><div style="font-size:12px;color:var(--mu);margin-bottom:3px">Name</div><input type="text" id="tpNm" placeholder="e.g. Summer Rota"/></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px">
+      <div><div style="font-size:12px;color:var(--mu);margin-bottom:3px">Start</div><input type="date" id="tpSt"/></div>
+      <div><div style="font-size:12px;color:var(--mu);margin-bottom:3px">End</div><input type="date" id="tpEn"/></div>
     </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px">
+      <div style="font-size:14px;font-weight:600">Cycle length</div>
+      <div class="stp"><button class="stb" onclick="stepTC(-1)">&#8722;</button><div class="stv" id="tcLen">4</div><button class="stb" onclick="stepTC(1)">+</button></div>
+    </div>
+    <div class="pd" id="tpPD"></div>
+    <button class="btn bp" onclick="saveTp()">Save Period Pattern</button>
+    <button class="btn bs" onclick="closeOv('tpOv')">Cancel</button>
   </div>
 </div>
-
-<!-- PAT DAY PICKER SHEET -->
-
-<div class="overlay" id="pdSheet">
-  <div class="sheet">
-    <div class="shandle"></div>
-    <div class="stitle" id="pdTitle">Day 1</div>
-    <div class="sp">
-      <div class="sgrid" id="pdGrid"></div>
-      <button class="btn btns" onclick="closeSheet('pdSheet')" style="margin-top:10px">Done</button>
-    </div>
-  </div>
 </div>
 
-<!-- ALARM POPUP SHEET -->
+<!-- PAT DAY PICKER -->
 
-<div class="overlay" id="almSheet">
-  <div class="sheet">
-    <div class="shandle"></div>
-    <div class="stitle" id="almTitle">Set Alarms</div>
-    <div class="sp">
-      <div style="background:var(--night-bg);border:1px solid var(--night);border-radius:12px;padding:13px;margin-bottom:14px;font-size:13px;color:#A0A0D0;line-height:1.7" id="almInfo"></div>
-      <div id="almLines"></div>
-      <div style="margin-top:12px;padding:12px;background:var(--surf2);border-radius:12px;font-size:13px;color:var(--muted);line-height:1.7">
-        <strong style="color:var(--text)">To set in Clock app:</strong><br/>
-        Open <strong>Clock</strong> app &#8594; tap <strong>Alarm</strong> tab &#8594; tap <strong>+</strong> &#8594; set each time above &#8594; label it with the shift name &#8594; Save.
-      </div>
-      <button class="btn" id="almCopyBtn" style="margin-top:10px;background:#001810;border:1px solid #10B981;color:#10B981;border-radius:13px;padding:13px;width:100%;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;" onclick="autoSilentCopy(buildAlarmText(ST.lastSync||'')); this.innerHTML='\u2713 Copied again!'; setTimeout(()=>{this.innerHTML='\u2713 Copied to clipboard!'},1500)">&#128203; Copy Again</button>
-      <button class="btn btns" onclick="closeSheet('almSheet')">Close</button>
-    </div>
+<div class="ov" id="pdOv">
+<div class="sh">
+  <div class="shh"></div>
+  <div class="sht" id="pdT">Day 1</div>
+  <div class="shs">
+    <div class="sg" id="pdGrid"></div>
+    <button class="btn bs" onclick="closeOv('pdOv')" style="margin-top:10px">Done</button>
   </div>
+</div>
+</div>
+
+<!-- ALARM SHEET -->
+
+<div class="ov" id="almOv">
+<div class="sh">
+  <div class="shh"></div>
+  <div class="sht" id="almT">Alarms</div>
+  <div class="shs">
+    <div id="almInfo" style="background:var(--nb);border:1px solid var(--cn);border-radius:11px;padding:13px;margin-bottom:12px;font-size:13px;color:#A0A0D0;line-height:1.7"></div>
+    <div id="almLines"></div>
+    <div style="margin-top:12px;padding:12px;background:var(--s2);border-radius:11px;font-size:13px;color:var(--mu);line-height:1.7">
+      <strong style="color:var(--tx)">To set in Clock app:</strong><br/>
+      Clock app &#8594; Alarm tab &#8594; + &#8594; set each time above
+    </div>
+    <button class="btn" id="almCpBtn" style="background:#001810;border:1px solid #10B981;color:#10B981;border-radius:13px;padding:13px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;width:100%">&#10003; Copied to clipboard!</button>
+    <button class="btn bs" onclick="closeOv('almOv')">Close</button>
+  </div>
+</div>
 </div>
 
 <!-- SHORTCUT SHEET -->
 
-<div class="overlay" id="scSheet">
-  <div class="sheet">
-    <div class="shandle"></div>
-    <div class="stitle">&#9889; Shortcuts Auto-Sync</div>
-    <div class="sp">
-      <div style="background:var(--night-bg);border:1px solid var(--night);border-radius:11px;padding:13px;margin-bottom:12px;font-size:13px;color:#A0A0D0;line-height:1.7">
-        Runs at <strong style="color:var(--text)">midnight every night</strong>. Creates alarms only if not set. Deletes passed alarms. Adds shift to Calendar.
-      </div>
-      <div style="background:var(--bg);border:1px solid var(--border);border-radius:11px;padding:13px;font-family:'Courier New',monospace;font-size:11px;color:#C0E0C0;line-height:1.9;white-space:pre-wrap;word-break:break-word;max-height:300px;overflow-y:scroll;margin-bottom:8px" id="scOutput"></div>
-      <button class="btn" id="scCopyBtn" onclick="copyScript()" style="background:var(--night-bg);border:1px solid var(--night);color:#818CF8;font-size:13px;font-weight:700;border-radius:11px;padding:10px;margin-top:0;">&#128203; Copy Script</button>
-      <div style="background:#001810;border:1px solid #10B98140;border-radius:11px;padding:13px;font-size:13px;color:#10B981;line-height:1.7;margin-top:8px">
-        Automation &#8594; + &#8594; Time of Day &#8594; 12:00 AM &#8594; Daily &#8594; select shortcut &#8594; turn off "Ask Before Running"
-      </div>
-      <button class="btn btns" onclick="closeSheet('scSheet')" style="margin-top:8px">Got it</button>
+<div class="ov" id="scOv">
+<div class="sh">
+  <div class="shh"></div>
+  <div class="sht">&#9889; Shortcuts Script</div>
+  <div class="shs">
+    <div style="background:var(--nb);border:1px solid var(--cn);border-radius:11px;padding:12px;margin-bottom:10px;font-size:13px;color:#A0A0D0;line-height:1.7">
+      Runs midnight nightly. Creates alarms only if not already set. Deletes passed alarms. Adds shift to Calendar.
     </div>
+    <div id="scOut" style="background:var(--bg);border:1px solid var(--bd);border-radius:11px;padding:12px;font-family:'Courier New',monospace;font-size:11px;color:#C0E0C0;line-height:1.9;white-space:pre-wrap;word-break:break-word;max-height:280px;overflow-y:auto;margin-bottom:8px"></div>
+    <button class="btn" id="scCpBtn" onclick="cpScript()" style="background:var(--nb);border:1px solid var(--cn);color:#818CF8;border-radius:11px;padding:10px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-top:0">&#128203; Copy Script</button>
+    <div style="background:#001810;border:1px solid #10B98140;border-radius:11px;padding:12px;font-size:13px;color:#10B981;line-height:1.7;margin-top:8px">
+      Automation &#8594; + &#8594; Time of Day &#8594; 12:00 AM &#8594; Daily &#8594; shortcut &#8594; Ask Before Running: OFF
+    </div>
+    <button class="btn bs" onclick="closeOv('scOv')" style="margin-top:8px">Got it</button>
   </div>
+</div>
 </div>
 
 <script>
-// ── SHIFTS ────────────────────────────────────────────────────────────────
-const SHIFTS={
-  morning:  {name:'Morning',     emoji:'🌅',start:'06:00',end:'14:00',nd:false},
-  lmorning: {name:'Long Morning',emoji:'🌄',start:'06:00',end:'18:00',nd:false},
-  afternoon:{name:'Afternoon',   emoji:'☀️', start:'14:00',end:'22:00',nd:false},
-  night:    {name:'Night',       emoji:'🌙',start:'22:00',end:'06:00',nd:true},
-  lnight:   {name:'Long Night',  emoji:'🌑',start:'18:00',end:'06:00',nd:true},
-  off:      {name:'Off',         emoji:'😴',start:null,end:null,nd:false},
-  sick:     {name:'Sick Leave',  emoji:'🤒',start:null,end:null,nd:false},
-  leave:    {name:'Annual Leave',emoji:'🏖️', start:null,end:null,nd:false},
-  training: {name:'Training',    emoji:'📚',start:'09:00',end:'17:00',nd:false},
+// ── SHIFT DEFINITIONS ────────────────────────────────────────────────────────
+const SH={
+  morning:  {n:'Morning',     e:'🌅',s:'06:00',f:'14:00',h:8, nd:false},
+  lmorning: {n:'Long Morning',e:'🌄',s:'06:00',f:'18:00',h:12,nd:false},
+  afternoon:{n:'Afternoon',   e:'☀️', s:'14:00',f:'22:00',h:8, nd:false},
+  night:    {n:'Night',       e:'🌙',s:'22:00',f:'06:00',h:8, nd:true},
+  lnight:   {n:'Long Night',  e:'🌑',s:'18:00',f:'06:00',h:12,nd:true},
+  off:      {n:'Off',         e:'😴',s:null,   f:null,   h:0, nd:false},
+  sick:     {n:'Sick Leave',  e:'🤒',s:null,   f:null,   h:0, nd:false},
+  leave:    {n:'Annual Leave',e:'🏖️', s:null,   f:null,   h:0, nd:false},
+  training: {n:'Training',    e:'📚',s:'09:00',f:'17:00',h:8, nd:false},
 };
-const SC={morning:'#F59E0B',lmorning:'#FBBF24',afternoon:'#10B981',night:'#818CF8',lnight:'#A78BFA',off:'#374151',sick:'#EF4444',leave:'#06B6D4',training:'#A855F7'};
-const SB={morning:'#1E1400',lmorning:'#241A00',afternoon:'#001810',night:'#0D0A2A',lnight:'#130A30',off:'#0F0F14',sick:'#1A0606',leave:'#001820',training:'#180A28'};
+const SC={morning:'#F59E0B',lmorning:'#FBBF24',afternoon:'#10B981',night:'#818CF8',lnight:'#A78BFA',off:'#4B5563',sick:'#EF4444',leave:'#06B6D4',training:'#A855F7'};
+const SBG={morning:'#1E1400',lmorning:'#241A00',afternoon:'#001810',night:'#0D0A2A',lnight:'#130A30',off:'#111118',sick:'#1A0606',leave:'#001820',training:'#180A28'};
 
-const DEF_ALM={morning:{count:1,base:'05:00',gap:5},lmorning:{count:1,base:'05:00',gap:5},afternoon:{count:1,base:'13:00',gap:5},night:{count:1,base:'21:00',gap:5},lnight:{count:1,base:'17:00',gap:5},training:{count:1,base:'08:00',gap:5}};
+// OT config: segments [{h:hours, r:multiplier}]
+// e.g. Long Night = [{h:3,r:1.5},{h:1,r:1.25}] means 3h@1.5x + 1h@1.25x
+// "offDuty" flag means if this shift replaces an OFF day in pattern -> auto overtime
+const DEF_OT_CFG={
+  morning:  {segs:[{h:8, r:1.0}], offDuty:false},
+  lmorning: {segs:[{h:12,r:1.25}],offDuty:false},
+  afternoon:{segs:[{h:8, r:1.0}], offDuty:false},
+  night:    {segs:[{h:8, r:1.0}], offDuty:false},
+  lnight:   {segs:[{h:3, r:1.5},{h:1,r:1.25}],offDuty:false},
+  training: {segs:[{h:8, r:1.0}], offDuty:false},
+};
 
+const DEF_ALM_CFG={
+  morning:  {c:1,b:'05:00',g:5},
+  lmorning: {c:1,b:'05:00',g:5},
+  afternoon:{c:1,b:'13:00',g:5},
+  night:    {c:1,b:'21:00',g:5},
+  lnight:   {c:1,b:'17:00',g:5},
+  training: {c:1,b:'08:00',g:5},
+};
+
+const MN=['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+// ── STATE ────────────────────────────────────────────────────────────────────
 let ST={
-  cycleStart:'2026-05-10',
-  pattern:['morning','morning','morning','night','night','night','off','off','afternoon','afternoon','afternoon','off'],
-  overrides:{},    // dk -> shiftKey
-  notes:{},        // dk -> string
-  highlights:{},   // dk -> 'yellow'|'red'|'green'|'blue'|''
-  tempPeriods:[],
-  alarmCfg:JSON.parse(JSON.stringify(DEF_ALM)),
+  cs:'2026-05-10',
+  pat:['morning','morning','morning','night','night','night','off','off','afternoon','afternoon','afternoon','off'],
+  ov:{}, nt:{}, hl:{}, tp:[],
+  almCfg:JSON.parse(JSON.stringify(DEF_ALM_CFG)),
+  otCfg:JSON.parse(JSON.stringify(DEF_OT_CFG)),
+  otRate:12,
   lastSync:null,
 };
+function loadST(){
+  try{const s=localStorage.getItem('sc_v8');if(s){const p=JSON.parse(s);ST={...ST,...p};
+    if(!ST.almCfg)ST.almCfg=JSON.parse(JSON.stringify(DEF_ALM_CFG));
+    if(!ST.otCfg)ST.otCfg=JSON.parse(JSON.stringify(DEF_OT_CFG));
+    if(!ST.nt)ST.nt={};if(!ST.hl)ST.hl={};
+  }}catch(e){}
+}
+function savST(){try{localStorage.setItem('sc_v8',JSON.stringify(ST));}catch(e){}}
 
-function loadST(){try{const s=localStorage.getItem('sc_v7');if(s){const p=JSON.parse(s);ST={...ST,...p};if(!ST.alarmCfg)ST.alarmCfg=JSON.parse(JSON.stringify(DEF_ALM));if(!ST.notes)ST.notes={};if(!ST.highlights)ST.highlights={};};}catch(e){}}
-function saveST(){try{localStorage.setItem('sc_v7',JSON.stringify(ST));}catch(e){}}
-
-// ── HELPERS ───────────────────────────────────────────────────────────────
+// ── HELPERS ──────────────────────────────────────────────────────────────────
 function dk(d){return d.toISOString().slice(0,10);}
 function pd(s){const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);}
-function addD(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r;}
-function to12h(t){if(!t)return'';const[h,m]=t.split(':').map(Number);return`${h%12||12}:${String(m).padStart(2,'0')} ${h>=12?'PM':'AM'}`;}
+function aD(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r;}
+function h12(t){if(!t)return'';const[h,m]=t.split(':').map(Number);return`${h%12||12}:${String(m).padStart(2,'0')} ${h>=12?'PM':'AM'}`;}
+function cMin(a,s){const[ah,am]=a.split(':').map(Number);const[sh,sm]=s.split(':').map(Number);let d=(sh*60+sm)-(ah*60+am);if(d<0)d+=1440;return d;}
 
-function getShift(dateStr){
-  if(ST.overrides[dateStr])return ST.overrides[dateStr];
-  const d=pd(dateStr);
-  let tpMatch=null;
-  for(const tp of ST.tempPeriods){const ts=pd(tp.start),te=pd(tp.end);if(d>=ts&&d<=te){const diff=Math.round((d-ts)/86400000);const len=tp.pattern.length;tpMatch=tp.pattern[((diff%len)+len)%len];}}
-  if(tpMatch)return tpMatch;
-  const start=pd(ST.cycleStart);const diff=Math.round((d-start)/86400000);const len=ST.pattern.length;
-  return ST.pattern[((diff%len)+len)%len];
+function getShift(ds){
+  if(ST.ov[ds])return ST.ov[ds];
+  const d=pd(ds);
+  for(const t of ST.tp){const ts=pd(t.s),te=pd(t.e);if(d>=ts&&d<=te){const diff=Math.round((d-ts)/86400000);const len=t.p.length;return t.p[((diff%len)+len)%len];}}
+  const st=pd(ST.cs);const diff=Math.round((d-st)/86400000);const len=ST.pat.length;
+  return ST.pat[((diff%len)+len)%len];
 }
 
-function alarmsFor(sk){
-  const cfg=ST.alarmCfg[sk];if(!cfg||!SHIFTS[sk]?.start)return[];
-  const[bh,bm]=cfg.base.split(':').map(Number);
-  return Array.from({length:cfg.count},(_,i)=>{
-    let t=bh*60+bm-(i*cfg.gap);if(t<0)t+=1440;
-    return`${String(Math.floor(t/60)).padStart(2,'0')}:${String(t%60).padStart(2,'0')}`;
-  });
+// Get what the BASE pattern says for a date (ignoring overrides/tp)
+function getBaseShift(ds){
+  const d=pd(ds);const st=pd(ST.cs);const diff=Math.round((d-st)/86400000);const len=ST.pat.length;
+  return ST.pat[((diff%len)+len)%len];
 }
 
-function calcMins(a,s){const[ah,am]=a.split(':').map(Number);const[sh,sm]=s.split(':').map(Number);let d=(sh*60+sm)-(ah*60+am);if(d<0)d+=1440;return d;}
+// Is this date an overtime day?
+// 1. Off in base pattern but now showing a work shift (override switched off->duty)
+// 2. Standard shift in base pattern but override changed to longer shift (morning->lmorning etc)
+// 3. Temp period shifts that differ from base off days
+function isOT(ds){
+  const actual=getShift(ds);
+  if(!SH[actual]?.s)return false; // rest days not OT
+  if(ST.ov[ds]){
+    const base=getBaseShift(ds);
+    if(!SH[base]?.s)return true; // off->duty = OT
+    // longer shift than base = OT
+    if(SH[actual].h>SH[base].h)return true;
+  }
+  // temp period overriding an off day
+  const d=pd(ds);
+  for(const t of ST.tp){const ts=pd(t.s),te=pd(t.e);if(d>=ts&&d<=te){const base=getBaseShift(ds);if(!SH[base]?.s)return true;if(SH[actual].h>(SH[base]?.h||0))return true;}}
+  return false;
+}
 
-// ── VIEW ──────────────────────────────────────────────────────────────────
+function alarms(sk){
+  const cfg=ST.almCfg[sk];if(!cfg||!SH[sk]?.s)return[];
+  const[bh,bm]=cfg.b.split(':').map(Number);
+  return Array.from({length:cfg.c},(_,i)=>{let t=bh*60+bm-i*cfg.g;if(t<0)t+=1440;return`${String(Math.floor(t/60)).padStart(2,'0')}:${String(t%60).padStart(2,'0')}`;});
+}
+
+// ── OVERTIME CALCULATION ─────────────────────────────────────────────────────
+function calcOT(startDs, endDs){
+  // Returns {days:[{date,shift,base,segs,totalH,totalPay,isOT}], summary}
+  const from=pd(startDs),to=pd(endDs);
+  const rate=parseFloat(ST.otRate)||12;
+  const days=[];
+  let totalH=0,totalPay=0,otH=0,otPay=0;
+  let cur=new Date(from);
+  while(cur<=to){
+    const ds=dk(cur);
+    const sk=getShift(ds);
+    const sh=SH[sk];
+    if(sh?.s){
+      const ot=isOT(ds);
+      const baseSk=getBaseShift(ds);
+      let segs;
+      if(ot){
+        // Off->duty: use 1.5x for all hours
+        if(!SH[baseSk]?.s){
+          segs=[{h:sh.h,r:1.5}];
+        } else {
+          // longer shift: extra hours at 1.5, normal hours at configured rate
+          segs=ST.otCfg[sk]?.segs||[{h:sh.h,r:1.0}];
+        }
+      } else {
+        segs=ST.otCfg[sk]?.segs||[{h:sh.h,r:1.0}];
+      }
+      const dayH=segs.reduce((a,s)=>a+s.h,0);
+      const dayPay=segs.reduce((a,s)=>a+s.h*rate*s.r,0);
+      totalH+=dayH;totalPay+=dayPay;
+      if(ot){otH+=dayH;otPay+=dayPay;}
+      days.push({ds,sk,sh,segs,dayH,dayPay,isOT:ot,baseSk});
+    }
+    cur=aD(cur,1);
+  }
+  return{days,totalH,totalPay,otH,otPay,rate};
+}
+
+// ── VIEW STATE ───────────────────────────────────────────────────────────────
 let VY=new Date().getFullYear(),VM=new Date().getMonth();
-let selectedDay=null;
-
-const MNAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
+let selDay=null,curTab='cal';
 
 function render(){
-  document.getElementById('mTitle').textContent=`${MNAMES[VM]} ${VY}`;
-  const today=new Date();today.setHours(0,0,0,0);
-  const todStr=dk(today);
+  document.getElementById('mTitle').textContent=`${MN[VM]} ${VY}`;
+  const today=new Date();today.setHours(0,0,0,0);const tds=dk(today);
   const first=new Date(VY,VM,1),last=new Date(VY,VM+1,0);
   const pad=first.getDay();
-  const grid=document.getElementById('calGrid');grid.innerHTML='';
-
+  const gr=document.getElementById('cgr');gr.innerHTML='';
   const used=new Set();
-
-  // pad start
-  for(let i=0;i<pad;i++){const d=new Date(VY,VM,1-(pad-i));grid.appendChild(makeCell(d,true,todStr));}
-  // month days
-  for(let d=1;d<=last.getDate();d++){
-    const date=new Date(VY,VM,d);
-    const dateStr=dk(date);
-    used.add(getShift(dateStr));
-    grid.appendChild(makeCell(date,false,todStr));
-  }
-  // pad end
+  for(let i=0;i<pad;i++)gr.appendChild(mkCell(new Date(VY,VM,1-(pad-i)),true,tds));
+  for(let d=1;d<=last.getDate();d++){const date=new Date(VY,VM,d);used.add(getShift(dk(date)));gr.appendChild(mkCell(date,false,tds));}
   const ep=(7-((pad+last.getDate())%7))%7;
-  for(let i=1;i<=ep;i++){const d=new Date(VY,VM+1,i);grid.appendChild(makeCell(d,true,todStr));}
-
-  renderTodayStrip(todStr);
-  renderSyncBanner(todStr);
-
+  for(let i=1;i<=ep;i++)gr.appendChild(mkCell(new Date(VY,VM+1,i),true,tds));
+  renderStrip(tds);renderSyncBar(tds);
   // Legend
-  const leg=document.getElementById('legend');
-  leg.innerHTML=[...used].map(k=>{const s=SHIFTS[k]||SHIFTS.off;const c=SC[k]||'#374151';return`<div class="legitem"><div class="legdot" style="background:${c}"></div>${s.name}</div>`;}).join('');
+  document.getElementById('leg').innerHTML=[...used].map(k=>{const s=SH[k];const c=SC[k]||'#4B5563';return`<div class="li"><div class="ld" style="background:${c}"></div>${s.n}</div>`;}).join('');
 }
 
-function makeCell(date,other,todStr){
-  const dateStr=dk(date);
-  const sk=getShift(dateStr);
-  const s=SHIFTS[sk]||SHIFTS.off;
-  const color=SC[sk]||'#374151';
-  const bg=SB[sk]||'#0F0F14';
-  const alarms=alarmsFor(sk);
-  const isToday=dateStr===todStr;
-  const isOverride=!!ST.overrides[dateStr];
-  const isTp=!isOverride&&ST.tempPeriods.some(tp=>pd(dateStr)>=pd(tp.start)&&pd(dateStr)<=pd(tp.end));
-  const hasNote=!!ST.notes[dateStr];
-  const hl=ST.highlights[dateStr]||'';
-  const isSelected=dateStr===selectedDay;
+function mkCell(date,other,tds){
+  const ds=dk(date);
+  const sk=getShift(ds);
+  const sh=SH[sk]||SH.off;
+  const col=SC[sk]||'#4B5563';
+  const bg=SBG[sk]||'#111118';
+  const alm=alarms(sk);
+  const isToday=ds===tds;
+  const isOvr=!!ST.ov[ds];
+  const isTp=!isOvr&&ST.tp.some(t=>pd(ds)>=pd(t.s)&&pd(ds)<=pd(t.e));
+  const hasNote=!!ST.nt[ds];
+  const hl=ST.hl[ds]||'';
+  const isSel=ds===selDay;
+  const otDay=isOT(ds);
 
   const cell=document.createElement('div');
-  let cls='cday';
-  if(other)cls+=' other';
-  if(isToday)cls+=' today';
-  if(isOverride)cls+=' override';
-  if(isTp)cls+=' temp-period';
-  if(hasNote)cls+=' hasNote';
-  if(hl)cls+=` hl-${hl}`;
-  if(isSelected)cls+=' selected';
+  let cls='cd';
+  if(other)cls+=' xo';
+  if(isToday)cls+=' tod';
+  if(isOvr)cls+=' ovr';
+  if(hasNote)cls+=' hn';
+  if(isSel)cls+=' sel';
+  if(otDay)cls+=' ot';
   cell.className=cls;
-  if(!other){
-    // background
-    if(!hl)cell.style.background=bg;
-    if(isOverride)cell.style.borderColor=color;
-    cell.onclick=()=>openDaySheet(dateStr);
+
+  // Background: highlight class overrides shift bg
+  if(hl==='y')cell.classList.add('hy');
+  else if(hl==='r')cell.classList.add('hr2');
+  else if(hl==='g')cell.classList.add('hg');
+  else if(hl==='b')cell.classList.add('hb');
+  else cell.style.background=bg;
+
+  if(isOvr&&!hl)cell.style.borderColor=col;
+  if(isTp&&!hl&&!isOvr)cell.style.outline='1px solid rgba(251,191,36,0.25)';
+
+  if(!other)cell.onclick=()=>openDaySheet(ds);
+
+  const dn=document.createElement('div');dn.className='dn';dn.style.color=col;dn.textContent=date.getDate();
+  const de=document.createElement('div');de.className='de';de.textContent=sh.e;
+  cell.appendChild(dn);cell.appendChild(de);
+
+  if(alm.length&&!other){
+    const da=document.createElement('div');da.className='da';
+    da.textContent=h12(alm[alm.length-1])+(alm.length>1?` +${alm.length-1}`:'');
+    cell.appendChild(da);
   }
-
-  const numEl=document.createElement('div');
-  numEl.className='dnum';numEl.style.color=color;numEl.textContent=date.getDate();
-  const emoEl=document.createElement('div');emoEl.className='demoji';emoEl.textContent=s.emoji;
-
-  cell.appendChild(numEl);cell.appendChild(emoEl);
-
-  if(alarms.length&&!other){
-    const almEl=document.createElement('div');almEl.className='dalarm';
-    almEl.textContent=to12h(alarms[alarms.length-1])+(alarms.length>1?` +${alarms.length-1}`:'');
-    cell.appendChild(almEl);
-  }
-
   return cell;
 }
 
-function renderTodayStrip(todStr){
-  const sk=getShift(todStr);const s=SHIFTS[sk]||SHIFTS.off;
-  const color=SC[sk]||'#374151';const bg=SB[sk]||'#0F0F14';
-  const alarms=alarmsFor(sk);
-  const tmr=dk(addD(pd(todStr),1));const tmrSk=getShift(tmr);const tmrS=SHIFTS[tmrSk]||SHIFTS.off;const tmrC=SC[tmrSk]||'#374151';const tmrAlarms=alarmsFor(tmrSk);
-  const note=ST.notes[todStr];
-
+function renderStrip(tds){
+  const sk=getShift(tds);const sh=SH[sk]||SH.off;
+  const col=SC[sk]||'#4B5563';const bg=SBG[sk]||'#111118';
+  const alm=alarms(sk);
+  const tmr=dk(aD(pd(tds),1));const tmrSk=getShift(tmr);const tmrSh=SH[tmrSk]||SH.off;const tmrCol=SC[tmrSk]||'#4B5563';const tmrAlm=alarms(tmrSk);
+  const nt=ST.nt[tds];const ot=isOT(tds);
   document.getElementById('todayStrip').innerHTML=
-    `<div class="tstrip" style="background:${bg};border:1px solid ${color}20" onclick="openDaySheet('${todStr}')">
-      <div style="font-size:30px">${s.emoji}</div>
+    `<div class="ts" style="background:${bg};border:1px solid ${col}22" onclick="openDaySheet('${tds}')">
+      <div style="font-size:30px">${sh.e}</div>
       <div style="flex:1;min-width:0">
-        <div style="font-size:17px;font-weight:800;color:${color}">${s.name}</div>
-        <div style="font-size:12px;opacity:0.7;margin-top:1px">${s.start?`${s.start} – ${s.end}`:'Rest day'}</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${alarms.map((a,i)=>`<span style="font-size:12px;font-weight:600;color:${color};font-family:'Courier New',monospace">&#9200; ${to12h(a)}</span>`).join('')||`<span style="font-size:12px;color:var(--muted)">No alarm</span>`}</div>
-        ${note?`<div style="font-size:11px;color:#FBBF24;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">&#128203; ${note}</div>`:''}
+        <div style="font-size:17px;font-weight:800;color:${col}">${sh.n}${ot?' <span style="font-size:11px;color:#FBBF24;font-weight:700">OT</span>':''}</div>
+        <div style="font-size:12px;opacity:.7;margin-top:1px">${sh.s?`${sh.s} \u2013 ${sh.f}`:'Rest day'}</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px">${alm.map(a=>`<span style="font-size:12px;font-weight:600;color:${col};font-family:'Courier New',monospace">&#9200; ${h12(a)}</span>`).join('')||`<span style="font-size:12px;color:var(--mu)">No alarm</span>`}</div>
+        ${nt?`<div style="font-size:11px;color:#FBBF24;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">&#128203; ${nt}</div>`:''}
       </div>
       <div style="text-align:right;flex-shrink:0">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:2px">Tomorrow</div>
-        <div style="font-size:18px">${tmrS.emoji}</div>
-        ${tmrAlarms.length?`<div style="font-size:10px;color:${tmrC};font-family:'Courier New',monospace">${to12h(tmrAlarms[tmrAlarms.length-1])}</div>`:''}
+        <div style="font-size:10px;color:var(--mu);margin-bottom:2px">Tomorrow</div>
+        <div style="font-size:18px">${tmrSh.e}</div>
+        ${tmrAlm.length?`<div style="font-size:10px;color:${tmrCol};font-family:'Courier New',monospace">${h12(tmrAlm[tmrAlm.length-1])}</div>`:''}
       </div>
     </div>`;
 }
 
-function renderSyncBanner(todStr){
-  const synced=ST.lastSync===todStr;
-  const sk=getShift(todStr);const s=SHIFTS[sk]||SHIFTS.off;
-  const alarms=alarmsFor(sk);
+function renderSyncBar(tds){
+  const synced=ST.lastSync===tds;const sk=getShift(tds);const sh=SH[sk]||SH.off;const alm=alarms(sk);
   const dot=synced?'#10B981':'#EF4444';
-  document.getElementById('syncBanner').innerHTML=
-    `<div class="sbanner" style="background:${synced?'#001810':'#1A0606'};border:1px solid ${dot}30" onclick="openAlarmPopup('${todStr}')">
-      <div class="sdot" style="background:${dot};box-shadow:0 0 5px ${dot}"></div>
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:600">${synced?'Alarms noted &#10003;':'View today\'s alarm times'}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:1px">${alarms.length?`${s.name} — ${alarms.length} alarm${alarms.length>1?'s':''}`:'Rest day — no alarm'}</div>
-      </div>
-      <div style="font-size:12px;color:var(--muted)">&#8250;</div>
+  document.getElementById('syncBar').innerHTML=
+    `<div class="sb" style="background:${synced?'#001810':'#1A0606'};border:1px solid ${dot}30" onclick="openAlmSheet('${tds}')">
+      <div class="sd" style="background:${dot};box-shadow:0 0 5px ${dot}"></div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:600">${synced?'Alarms copied \u2713':'Tap to copy alarm times'}</div>
+      <div style="font-size:11px;color:var(--mu);margin-top:1px">${alm.length?`${sh.n} \u2014 ${alm.length} alarm${alm.length>1?'s':''}`:'Rest day \u2014 no alarm'}</div></div>
+      <div style="font-size:12px;color:var(--mu)">\u203a</div>
     </div>`;
 }
 
-// ── ALARM POPUP (no download, just display) ───────────────────────────────
-function openAlarmPopup(dateStr){
-  const sk=getShift(dateStr);const s=SHIFTS[sk]||SHIFTS.off;
-  const alarms=alarmsFor(sk);
-  const color=SC[sk]||'#374151';
-  const date=pd(dateStr);
-  document.getElementById('almTitle').textContent=`${s.emoji} ${s.name} — Alarms`;
-  document.getElementById('almInfo').innerHTML=
-    `<strong style="color:#E8E8F8">${date.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}</strong><br/>
-    ${s.start?`Shift: <strong style="color:#E8E8F8">${s.start} \u2013 ${s.end}</strong>`:'Rest day \u2014 no alarm needed'}`;
+// ── TAB ──────────────────────────────────────────────────────────────────────
+function showTab(t){
+  curTab=t;
+  const calEls=['cgr','todayStrip','syncBar','leg'];
+  const wd=document.querySelector('.wdr');
+  document.querySelectorAll('.ntb').forEach(b=>b.classList.remove('on'));
+  document.getElementById('nCal').classList.toggle('on',t==='cal');
+  document.getElementById('nOT').classList.toggle('on',t==='ot');
+  document.getElementById('nSet').classList.toggle('on',t==='set');
+  if(t==='cal'){
+    calEls.forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='';});
+    wd.style.display='';
+    document.getElementById('setPage').style.display='none';
+    document.getElementById('otPage').style.display='none';
+  } else if(t==='set'){
+    calEls.forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+    wd.style.display='none';
+    document.getElementById('setPage').style.display='block';
+    document.getElementById('otPage').style.display='none';
+    loadSettings();renderTpList();
+  } else if(t==='ot'){
+    calEls.forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+    wd.style.display='none';
+    document.getElementById('setPage').style.display='none';
+    document.getElementById('otPage').style.display='block';
+    renderOTPage();
+  }
+}
 
-  const lines=document.getElementById('almLines');
-  if(!alarms.length){
-    lines.innerHTML=`<div style="text-align:center;padding:20px;font-size:32px">\u{1F634}</div><div style="text-align:center;color:var(--muted);font-size:14px">No alarm needed</div>`;
+// ── OVERLAY HELPERS ──────────────────────────────────────────────────────────
+function openOv(id){document.getElementById(id).classList.add('op');}
+function closeOv(id){document.getElementById(id).classList.remove('op');}
+document.querySelectorAll('.ov').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('op');}));
+
+// ── DAY SHEET ────────────────────────────────────────────────────────────────
+let editDs=null,editSk=null,repOn=false,reEv=1,reOc=4,editHL='';
+
+function openDaySheet(ds){
+  editDs=ds;selDay=ds;render();
+  const d=pd(ds);
+  const DN=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  document.getElementById('dayT').textContent=`${DN[d.getDay()]}, ${d.toLocaleDateString('en-GB',{day:'numeric',month:'long'})}`;
+  editSk=getShift(ds);
+  renderSG('shGrid',editSk,k=>{editSk=k;renderSG('shGrid',k,k2=>{editSk=k2;});});
+  document.getElementById('dayNote').value=ST.nt[ds]||'';
+  editHL=ST.hl[ds]||'';updateHL(editHL);
+  document.getElementById('rFrom').value=ds;document.getElementById('rTo').value=ds;
+  repOn=false;reEv=1;reOc=4;
+  document.getElementById('repTg').classList.remove('on');
+  document.getElementById('repOpts').style.display='none';
+  document.getElementById('reV').textContent='1';document.getElementById('ocV').textContent='4';
+  openOv('dayOv');
+}
+
+function updateHL(hl){
+  const map={N:'',Y:'y',R:'r',G:'g',B:'b'};
+  ['N','Y','R','G','B'].forEach(c=>{
+    const el=document.getElementById(`hl${c}`);if(!el)return;
+    const match=(c==='N'&&!hl)||(map[c]===hl);
+    el.style.borderColor=match?'#fff':'transparent';
+    el.style.transform=match?'scale(1.25)':'scale(1)';
+  });
+}
+function setHL(h){editHL=h;updateHL(h);}
+
+function renderSG(gId,cur,onSel){
+  const g=document.getElementById(gId);g.innerHTML='';
+  Object.entries(SH).forEach(([k,s])=>{
+    const el=document.createElement('div');el.className='so'+(k===cur?' sl':'');
+    el.style.background=SBG[k]||'#111118';el.style.color=SC[k]||'#4B5563';
+    el.innerHTML=`<div class="oe">${s.e}</div><div class="on">${s.n}</div><div class="ot2">${s.s?`${s.s}\u2013${s.f}`:'No shift'}</div>`;
+    el.onclick=()=>onSel(k);g.appendChild(el);
+  });
+}
+
+function togRep(){repOn=!repOn;document.getElementById('repTg').classList.toggle('on',repOn);document.getElementById('repOpts').style.display=repOn?'block':'none';}
+function stepRe(d){reEv=Math.max(1,reEv+d);document.getElementById('reV').textContent=reEv;}
+function stepOc(d){reOc=Math.max(1,reOc+d);document.getElementById('ocV').textContent=reOc;}
+
+function applyOv(){
+  const from=pd(document.getElementById('rFrom').value);
+  const to=pd(document.getElementById('rTo').value);
+  const unit=document.getElementById('reU').value;
+  const note=document.getElementById('dayNote').value.trim();
+  const apR=(f,t)=>{let c=new Date(f);while(c<=t){const ds2=dk(c);ST.ov[ds2]=editSk;if(editHL)ST.hl[ds2]=editHL;else delete ST.hl[ds2];if(note)ST.nt[ds2]=note;else delete ST.nt[ds2];c=aD(c,1);}};
+  apR(from,to);
+  if(repOn){let anc=new Date(from);const sp=to-from;for(let i=1;i<reOc;i++){if(unit==='day')anc=aD(anc,reEv);else if(unit==='week')anc=aD(anc,reEv*7);else{anc=new Date(anc);anc.setMonth(anc.getMonth()+reEv);}apR(anc,new Date(anc.getTime()+sp));}}
+  savST();selDay=null;render();closeOv('dayOv');
+}
+
+function clearOv(){
+  const from=pd(document.getElementById('rFrom').value);
+  const to=pd(document.getElementById('rTo').value);
+  let c=new Date(from);while(c<=to){const ds2=dk(c);delete ST.ov[ds2];delete ST.hl[ds2];delete ST.nt[ds2];c=aD(c,1);}
+  savST();selDay=null;render();closeOv('dayOv');
+}
+
+// ── PATTERN ──────────────────────────────────────────────────────────────────
+let ePat=[],ePLen=12;
+function openPat(){ePat=[...ST.pat];ePLen=ePat.length;document.getElementById('cyLen').textContent=ePLen;renderPD();openOv('patOv');}
+function stepCy(d){ePLen=Math.max(1,Math.min(60,ePLen+d));while(ePat.length<ePLen)ePat.push('off');while(ePat.length>ePLen)ePat.pop();document.getElementById('cyLen').textContent=ePLen;renderPD();}
+function renderPD(){const c=document.getElementById('patDays');c.innerHTML='';ePat.forEach((k,i)=>{const el=document.createElement('div');el.className='pdi';el.style.background=SBG[k]||'#111118';el.style.borderColor=SC[k]||'#4B5563';el.innerHTML=`<div class="pdn" style="color:${SC[k]||'#4B5563'}">${i+1}</div><div class="pde">${SH[k]?.e||'😴'}</div>`;el.onclick=()=>openPD(i,'base');c.appendChild(el);});}
+function savePat(){ST.pat=[...ePat];savST();render();closeOv('patOv');}
+
+// ── TEMP PERIOD ───────────────────────────────────────────────────────────────
+let tpEP=[],tpEL=4,tpEId=null;
+function openTpSheet(id){
+  tpEId=id||null;const ex=id?ST.tp.find(t=>t.id===id):null;
+  document.getElementById('tpT').textContent=ex?'Edit Period Pattern':'New Period Pattern';
+  document.getElementById('tpNm').value=ex?ex.nm:'';
+  document.getElementById('tpSt').value=ex?ex.s:dk(new Date());
+  document.getElementById('tpEn').value=ex?ex.e:'';
+  tpEP=ex?[...ex.p]:['morning','morning','off','off'];tpEL=tpEP.length;
+  document.getElementById('tcLen').textContent=tpEL;renderTPD();openOv('tpOv');
+}
+function stepTC(d){tpEL=Math.max(1,Math.min(60,tpEL+d));while(tpEP.length<tpEL)tpEP.push('off');while(tpEP.length>tpEL)tpEP.pop();document.getElementById('tcLen').textContent=tpEL;renderTPD();}
+function renderTPD(){const c=document.getElementById('tpPD');c.innerHTML='';tpEP.forEach((k,i)=>{const el=document.createElement('div');el.className='pdi';el.style.background=SBG[k]||'#111118';el.style.borderColor=SC[k]||'#4B5563';el.innerHTML=`<div class="pdn" style="color:${SC[k]||'#4B5563'}">${i+1}</div><div class="pde">${SH[k]?.e||'😴'}</div>`;el.onclick=()=>openPD(i,'tp');c.appendChild(el);});}
+function saveTp(){
+  const nm=document.getElementById('tpNm').value.trim()||'Period';
+  const s=document.getElementById('tpSt').value,e=document.getElementById('tpEn').value;
+  if(!s||!e){alert('Set dates.');return;}
+  const entry={id:tpEId||Date.now().toString(),nm,s,e,p:[...tpEP]};
+  if(tpEId)ST.tp=ST.tp.map(t=>t.id===tpEId?entry:t);else ST.tp.push(entry);
+  savST();render();renderTpList();closeOv('tpOv');
+}
+function renderTpList(){
+  const c=document.getElementById('tpList');if(!c)return;
+  if(!ST.tp.length){c.innerHTML=`<div style="font-size:13px;color:var(--mu);padding:4px 0 8px">No temporary periods yet.</div>`;return;}
+  c.innerHTML=ST.tp.map(t=>`<div class="tp"><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:14px;font-weight:700">${t.nm}</div><div style="display:flex;gap:4px"><button onclick="openTpSheet('${t.id}')" style="background:none;border:none;color:var(--mu);font-size:15px;cursor:pointer;padding:4px">&#9998;</button><button onclick="delTp('${t.id}')" style="background:none;border:none;color:var(--ck);font-size:15px;cursor:pointer;padding:4px">&#10005;</button></div></div><div style="font-size:12px;color:var(--mu);margin-top:3px">${t.s} &#8594; ${t.e} &middot; ${t.p.length}-day cycle</div><div style="font-size:15px;margin-top:5px;letter-spacing:2px">${t.p.slice(0,10).map(k=>SH[k]?.e||'😴').join('')}${t.p.length>10?` +${t.p.length-10}`:''}</div></div>`).join('');
+}
+function delTp(id){if(confirm('Delete?')){ST.tp=ST.tp.filter(t=>t.id!==id);savST();render();renderTpList();}}
+
+// ── PAT DAY PICKER ────────────────────────────────────────────────────────────
+let pdI=null,pdC='base';
+function openPD(i,c){
+  pdI=i;pdC=c;document.getElementById('pdT').textContent=`Day ${i+1}`;
+  const cur=c==='tp'?tpEP[i]:ePat[i];
+  const onS=k=>{if(pdC==='tp'){tpEP[pdI]=k;renderTPD();}else{ePat[pdI]=k;renderPD();}renderSG('pdGrid',k,onS);};
+  renderSG('pdGrid',cur,onS);openOv('pdOv');
+}
+
+// ── ALARM SHEET ───────────────────────────────────────────────────────────────
+function openAlmSheet(ds){
+  const sk=getShift(ds);const sh=SH[sk]||SH.off;const alm=alarms(sk);const col=SC[sk]||'#4B5563';
+  const d=pd(ds);
+  document.getElementById('almT').textContent=`${sh.e} ${sh.n} \u2014 Alarms`;
+  document.getElementById('almInfo').innerHTML=
+    `<strong style="color:#E8E8F8">${d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}</strong><br/>
+    ${sh.s?`Shift: <strong style="color:#E8E8F8">${sh.s} \u2013 ${sh.f}</strong>`:'Rest day \u2014 no alarm needed'}`;
+
+  if(!alm.length){
+    document.getElementById('almLines').innerHTML=`<div style="text-align:center;padding:20px;font-size:32px">😴</div><div style="text-align:center;color:var(--mu);font-size:14px">No alarm needed</div>`;
   } else {
-    lines.innerHTML=alarms.map((a,i)=>`
-      <div class="almline">
+    document.getElementById('almLines').innerHTML=alm.map((a,i)=>`
+      <div class="aln">
         <div style="display:flex;align-items:center;gap:10px">
-          <div class="almnum" style="background:${color}">A${i+1}</div>
+          <div class="anm" style="background:${col}">A${i+1}</div>
           <div>
-            <div style="font-size:17px;font-weight:800;font-family:'Courier New',monospace;color:${color}">${to12h(a)}</div>
-            <div style="font-size:11px;color:var(--muted)">${a} \u2014 ${calcMins(a,s.start)} min before shift</div>
+            <div style="font-size:17px;font-weight:800;font-family:'Courier New',monospace;color:${col}">${h12(a)}</div>
+            <div style="font-size:11px;color:var(--mu)">${a} \u2014 ${cMin(a,sh.s)} min before</div>
           </div>
         </div>
-        <button onclick="openClockApp('${a}')" style="background:#0D0A2A;border:1px solid #818CF8;border-radius:8px;color:#818CF8;font-size:12px;font-weight:700;padding:6px 10px;cursor:pointer;font-family:inherit">Open Clock \u2192</button>
+        <button onclick="tryOpenClock('${a}')" style="background:var(--nb);border:1px solid var(--cn);border-radius:8px;color:#818CF8;font-size:12px;font-weight:700;padding:6px 10px;cursor:pointer;font-family:inherit">Clock \u2192</button>
       </div>`).join('');
   }
 
-  // AUTO-COPY alarm times as soon as popup opens
-  if(alarms.length){
-    const copyText=buildAlarmText(dateStr);
-    autoSilentCopy(copyText);
-    const cb=document.getElementById('almCopyBtn');
-    if(cb){cb.innerHTML='\u2713 Copied to clipboard!';cb.style.background='#001810';cb.style.borderColor='#10B981';cb.style.color='#10B981';}
-  }
+  // AUTO COPY immediately
+  const txt=buildAlmText(ds);silentCopy(txt);
+  const btn=document.getElementById('almCpBtn');
+  btn.innerHTML='&#10003; Copied to clipboard!';
+  btn.style.background='#001810';btn.style.borderColor='#10B981';btn.style.color='#10B981';
+  btn.onclick=()=>{silentCopy(txt);btn.innerHTML='&#10003; Copied again!';setTimeout(()=>{btn.innerHTML='&#10003; Copied to clipboard!';},1500);};
 
-  ST.lastSync=dateStr;saveST();
-  renderSyncBanner(dk(new Date()));
-  openSheet('almSheet');
+  ST.lastSync=ds;savST();renderSyncBar(dk(new Date()));
+  openOv('almOv');
 }
 
-function buildAlarmText(dateStr){
-  const sk=getShift(dateStr);const s=SHIFTS[sk]||SHIFTS.off;
-  const alarms=alarmsFor(sk);
-  const date=pd(dateStr);
-  let text=`ShiftCal \u2014 ${date.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}\n${s.emoji} ${s.name}`;
-  if(s.start)text+=`\nShift: ${s.start} \u2013 ${s.end}`;
-  if(alarms.length){text+=`\n\nAlarms:`;alarms.forEach((a,i)=>{text+=`\n  Alarm ${i+1}: ${to12h(a)}`;});}
-  else text+='\n\nRest day \u2014 no alarm needed';
-  return text;
+function buildAlmText(ds){
+  const sk=getShift(ds);const sh=SH[sk]||SH.off;const alm=alarms(sk);
+  const d=pd(ds);
+  let t=`ShiftCal \u2014 ${d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}\n${sh.e} ${sh.n}`;
+  if(sh.s)t+=`\nShift: ${sh.s} \u2013 ${sh.f}`;
+  if(alm.length){t+=`\n\nAlarms:`;alm.forEach((a,i)=>{t+=`\n  Alarm ${i+1}: ${h12(a)}`;});}
+  else t+='\n\nRest day \u2014 no alarm needed';
+  return t;
 }
 
-function autoSilentCopy(text){
-  try{
-    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).catch(()=>execCopy(text));}
-    else execCopy(text);
-  }catch(e){execCopy(text);}
+function silentCopy(text){
+  try{if(navigator.clipboard?.writeText)navigator.clipboard.writeText(text).catch(()=>execCp(text));else execCp(text);}catch(e){execCp(text);}
 }
+function execCp(text){const ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;opacity:0;pointer-events:none;top:0;left:0;';document.body.appendChild(ta);ta.focus();ta.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(ta);}
 
-function execCopy(text){
-  const ta=document.createElement('textarea');ta.value=text;
-  ta.style.cssText='position:fixed;top:0;left:0;opacity:0;pointer-events:none;';
-  document.body.appendChild(ta);ta.focus();ta.select();
-  try{document.execCommand('copy');}catch(e){}
-  document.body.removeChild(ta);
-}
-
-function openClockApp(time){
-  // Try to open Clock app on iOS via URL scheme
+function tryOpenClock(time){
   window.location.href='clock-alarm://';
-  // Brief delay then show reminder
-  setTimeout(()=>{
-    const[h,m]=time.split(':').map(Number);
-    const ap=h>=12?'PM':'AM';const h12=h%12||12;
-    alert(`Set alarm in Clock app:\n\n${h12}:${String(m).padStart(2,'0')} ${ap}\n\nAlarm times are copied to your clipboard.`);
-  },500);
+  setTimeout(()=>{const[h,m]=time.split(':').map(Number);const ap=h>=12?'PM':'AM';const h2=h%12||12;alert(`Set alarm in Clock app:\n\n${h2}:${String(m).padStart(2,'0')} ${ap}\n\nAlarm times already copied to clipboard.`);},500);
 }
 
-// copyAlarmInfo and fallbackCopy replaced by autoSilentCopy/execCopy above
-
-// ── NAVIGATION ────────────────────────────────────────────────────────────
-document.getElementById('prevBtn').onclick=()=>{VM--;if(VM<0){VM=11;VY--;}render();};
-document.getElementById('nextBtn').onclick=()=>{VM++;if(VM>11){VM=0;VY++;}render();};
-document.getElementById('todayBtn').onclick=()=>{const n=new Date();VY=n.getFullYear();VM=n.getMonth();render();};
-document.getElementById('patBtn').onclick=openPatSheet;
-
-// ── TAB SWITCH ─────────────────────────────────────────────────────────────
-function switchTab(tab){
-  const calEls=['calGrid','todayStrip','syncBanner','legend'];
-  const wdEl=document.querySelector('.wdays');
-  const setEl=document.getElementById('settingsPage');
-  const nC=document.getElementById('navCal'),nS=document.getElementById('navSet');
-  if(tab==='cal'){
-    calEls.forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='';});
-    wdEl.style.display='';setEl.style.display='none';
-    nC.classList.add('active');nS.classList.remove('active');
-  } else {
-    calEls.forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
-    wdEl.style.display='none';setEl.style.display='block';
-    nC.classList.remove('active');nS.classList.add('active');
-    loadSettings();renderTpList();
-  }
+// ── SETTINGS ──────────────────────────────────────────────────────────────────
+function loadSettings(){
+  document.getElementById('csInput').value=ST.cs;
+  document.getElementById('otRate').value=ST.otRate||12;
+  document.getElementById('yr').textContent=new Date().getFullYear();
+  renderOTCfg();renderAlmCfg();
 }
+function savCS(v){ST.cs=v;savST();render();}
+function saveOT(){ST.otRate=parseFloat(document.getElementById('otRate').value)||12;savST();}
 
-// ── SHEET HELPERS ─────────────────────────────────────────────────────────
-function openSheet(id){document.getElementById(id).classList.add('open');}
-function closeSheet(id){document.getElementById(id).classList.remove('open');}
-
-// Close sheet when tapping overlay background
-document.querySelectorAll('.overlay').forEach(o=>{
-  o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');});
-});
-
-// ── DAY SHEET ─────────────────────────────────────────────────────────────
-let editDk=null,editShift=null,repeatOn=false,repEvery=1,repOccur=4,editHL='';
-
-function openDaySheet(dateStr){
-  editDk=dateStr;
-  selectedDay=dateStr;
-  render(); // re-render to show selection highlight
-
-  const d=pd(dateStr);
-  const DN=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  document.getElementById('daySheetTitle').textContent=
-    `${DN[d.getDay()]}, ${d.toLocaleDateString('en-GB',{day:'numeric',month:'long'})}`;
-
-  editShift=getShift(dateStr);
-  renderShiftGrid('shiftGrid',editShift,k=>{editShift=k;renderShiftGrid('shiftGrid',k,k2=>{editShift=k2;});});
-
-  // Load note
-  document.getElementById('dayNote').value=ST.notes[dateStr]||'';
-
-  // Load highlight
-  editHL=ST.highlights[dateStr]||'';
-  updateHLButtons(editHL);
-
-  // Range
-  document.getElementById('rangeFrom').value=dateStr;
-  document.getElementById('rangeTo').value=dateStr;
-
-  // Reset repeat
-  repeatOn=false;repEvery=1;repOccur=4;
-  document.getElementById('repeatTog').classList.remove('on');
-  document.getElementById('repeatOpts').style.display='none';
-  document.getElementById('repEvery').textContent='1';
-  document.getElementById('repOccur').textContent='4';
-
-  openSheet('daySheet');
-}
-
-function updateHLButtons(hl){
-  ['none','yellow','red','green','blue'].forEach(c=>{
-    const el=document.getElementById(`hl-${c}`);
-    if(!el)return;
-    const isActive=(c==='none'&&!hl)||(c===hl);
-    el.style.borderColor=isActive?'white':'transparent';
-    el.style.transform=isActive?'scale(1.2)':'scale(1)';
-  });
-}
-
-function setHL(color){editHL=color;updateHLButtons(color);}
-
-function renderShiftGrid(gridId,current,onSelect){
-  const g=document.getElementById(gridId);g.innerHTML='';
-  Object.entries(SHIFTS).forEach(([k,s])=>{
-    const el=document.createElement('div');
-    el.className='sopt'+(k===current?' sel':'');
-    el.style.background=SB[k]||'#0F0F14';el.style.color=SC[k]||'#374151';
-    el.innerHTML=`<div class="oe">${s.emoji}</div><div class="on">${s.name}</div><div class="ot">${s.start?`${s.start}–${s.end}`:'No shift'}</div>`;
-    el.onclick=()=>onSelect(k);g.appendChild(el);
-  });
-}
-
-function toggleRepeat(){repeatOn=!repeatOn;document.getElementById('repeatTog').classList.toggle('on',repeatOn);document.getElementById('repeatOpts').style.display=repeatOn?'block':'none';}
-function stepRep(d){repEvery=Math.max(1,repEvery+d);document.getElementById('repEvery').textContent=repEvery;}
-function stepOcc(d){repOccur=Math.max(1,repOccur+d);document.getElementById('repOccur').textContent=repOccur;}
-
-function applyOverride(){
-  const from=pd(document.getElementById('rangeFrom').value);
-  const to=pd(document.getElementById('rangeTo').value);
-  const unit=document.getElementById('repUnit').value;
-  const note=document.getElementById('dayNote').value.trim();
-
-  const applyRange=(f,t)=>{
-    let c=new Date(f);
-    while(c<=t){
-      const dStr=dk(c);
-      ST.overrides[dStr]=editShift;
-      if(editHL)ST.highlights[dStr]=editHL; else delete ST.highlights[dStr];
-      if(note)ST.notes[dStr]=note; else delete ST.notes[dStr];
-      c=addD(c,1);
-    }
-  };
-
-  applyRange(from,to);
-  if(repeatOn){
-    let anchor=new Date(from);const spanMs=to-from;
-    for(let i=1;i<repOccur;i++){
-      if(unit==='day')anchor=addD(anchor,repEvery);
-      else if(unit==='week')anchor=addD(anchor,repEvery*7);
-      else{anchor=new Date(anchor);anchor.setMonth(anchor.getMonth()+repEvery);}
-      applyRange(anchor,new Date(anchor.getTime()+spanMs));
-    }
-  }
-  saveST();selectedDay=null;render();closeSheet('daySheet');
-}
-
-function clearOverride(){
-  const from=pd(document.getElementById('rangeFrom').value);
-  const to=pd(document.getElementById('rangeTo').value);
-  let c=new Date(from);
-  while(c<=to){
-    const dStr=dk(c);
-    delete ST.overrides[dStr];delete ST.highlights[dStr];delete ST.notes[dStr];
-    c=addD(c,1);
-  }
-  saveST();selectedDay=null;render();closeSheet('daySheet');
-}
-
-// ── PATTERN SHEET ─────────────────────────────────────────────────────────
-let editPat=[],editPatLen=12;
-function openPatSheet(){
-  editPat=[...ST.pattern];editPatLen=editPat.length;
-  document.getElementById('cycLen').textContent=editPatLen;
-  renderPatDays();openSheet('patSheet');
-}
-function stepCyc(d){
-  editPatLen=Math.max(1,Math.min(60,editPatLen+d));
-  while(editPat.length<editPatLen)editPat.push('off');
-  while(editPat.length>editPatLen)editPat.pop();
-  document.getElementById('cycLen').textContent=editPatLen;renderPatDays();
-}
-function renderPatDays(){
-  const c=document.getElementById('patDays');c.innerHTML='';
-  editPat.forEach((k,i)=>{
-    const el=document.createElement('div');el.className='pday';
-    el.style.background=SB[k]||'#0F0F14';el.style.borderColor=SC[k]||'#374151';
-    el.innerHTML=`<div class="pdn" style="color:${SC[k]||'#374151'}">${i+1}</div><div class="pde">${SHIFTS[k]?.emoji||'😴'}</div>`;
-    el.onclick=()=>openPdSheet(i,'base');c.appendChild(el);
-  });
-}
-function savePattern(){ST.pattern=[...editPat];saveST();render();closeSheet('patSheet');}
-
-// ── TEMP PERIOD ────────────────────────────────────────────────────────────
-let tpEditPat=[],tpCycLen=4,tpEditId=null;
-function openTpSheet(id){
-  tpEditId=id||null;const ex=id?ST.tempPeriods.find(t=>t.id===id):null;
-  document.getElementById('tpSheetTitle').textContent=ex?'Edit Period Pattern':'New Period Pattern';
-  document.getElementById('tpName').value=ex?ex.name:'';
-  document.getElementById('tpStart').value=ex?ex.start:dk(new Date());
-  document.getElementById('tpEnd').value=ex?ex.end:'';
-  tpEditPat=ex?[...ex.pattern]:['morning','morning','off','off'];
-  tpCycLen=tpEditPat.length;document.getElementById('tpCycLen').textContent=tpCycLen;
-  renderTpPatDays();openSheet('tpSheet');
-}
-function stepTpCyc(d){
-  tpCycLen=Math.max(1,Math.min(60,tpCycLen+d));
-  while(tpEditPat.length<tpCycLen)tpEditPat.push('off');
-  while(tpEditPat.length>tpCycLen)tpEditPat.pop();
-  document.getElementById('tpCycLen').textContent=tpCycLen;renderTpPatDays();
-}
-function renderTpPatDays(){
-  const c=document.getElementById('tpPatDays');c.innerHTML='';
-  tpEditPat.forEach((k,i)=>{
-    const el=document.createElement('div');el.className='pday';
-    el.style.background=SB[k]||'#0F0F14';el.style.borderColor=SC[k]||'#374151';
-    el.innerHTML=`<div class="pdn" style="color:${SC[k]||'#374151'}">${i+1}</div><div class="pde">${SHIFTS[k]?.emoji||'😴'}</div>`;
-    el.onclick=()=>openPdSheet(i,'tp');c.appendChild(el);
-  });
-}
-function saveTp(){
-  const name=document.getElementById('tpName').value.trim()||'Temp Period';
-  const start=document.getElementById('tpStart').value,end=document.getElementById('tpEnd').value;
-  if(!start||!end){alert('Set start and end dates.');return;}
-  const entry={id:tpEditId||Date.now().toString(),name,start,end,pattern:[...tpEditPat]};
-  if(tpEditId)ST.tempPeriods=ST.tempPeriods.map(t=>t.id===tpEditId?entry:t);
-  else ST.tempPeriods.push(entry);
-  saveST();render();renderTpList();closeSheet('tpSheet');
-}
-function renderTpList(){
-  const c=document.getElementById('tempPeriodList');if(!c)return;
-  if(!ST.tempPeriods.length){c.innerHTML=`<div style="font-size:13px;color:var(--muted);padding:4px 0 8px">No temporary periods yet.</div>`;return;}
-  c.innerHTML=ST.tempPeriods.map(tp=>`
-    <div class="tpitem">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div style="font-size:14px;font-weight:700">${tp.name}</div>
-        <div style="display:flex;gap:4px">
-          <button onclick="openTpSheet('${tp.id}')" style="background:none;border:none;color:var(--muted);font-size:15px;cursor:pointer;padding:4px">&#9998;</button>
-          <button onclick="delTp('${tp.id}')" style="background:none;border:none;color:var(--sick);font-size:15px;cursor:pointer;padding:4px">&#10005;</button>
+function renderOTCfg(){
+  const c=document.getElementById('otCfgSection');if(!c)return;
+  const workShifts=Object.entries(SH).filter(([,s])=>s.s);
+  c.innerHTML=workShifts.map(([sk,s])=>{
+    const cfg=ST.otCfg[sk]||{segs:[{h:s.h,r:1.0}]};
+    const col=SC[sk];const bg=SBG[sk];
+    const totalH=cfg.segs.reduce((a,seg)=>a+seg.h,0);
+    return`<div class="otcard" style="border-left:3px solid ${col}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:14px;font-weight:700;color:${col}">${s.e} ${s.n} (${totalH}h total)</div>
+        <div style="display:flex;gap:5px">
+          ${[1,2,3].map(n=>`<button onclick="setOTSegs('${sk}',${n})" style="width:26px;height:26px;border-radius:7px;border:1px solid ${cfg.segs.length===n?col:'var(--bd)'};background:${cfg.segs.length===n?col:'var(--s1)'};color:${cfg.segs.length===n?'#000':'var(--tx)'};font-size:12px;cursor:pointer">${n}</button>`).join('')}
+          <span style="font-size:11px;color:var(--mu);padding:0 2px;align-self:center">seg</span>
         </div>
       </div>
-      <div style="font-size:12px;color:var(--muted);margin-top:3px">${tp.start} &#8594; ${tp.end} &middot; ${tp.pattern.length}-day cycle</div>
-      <div style="font-size:15px;margin-top:5px;letter-spacing:2px">${tp.pattern.slice(0,10).map(k=>SHIFTS[k]?.emoji||'😴').join('')}${tp.pattern.length>10?` +${tp.pattern.length-10}`:''}</div>
-    </div>`).join('');
+      ${cfg.segs.map((seg,i)=>`
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;padding:8px;background:var(--s1);border-radius:8px">
+          <div>
+            <div style="font-size:11px;color:var(--mu);margin-bottom:3px">Seg ${i+1} Hours</div>
+            <input type="number" min="0.5" max="24" step="0.5" value="${seg.h}" onchange="setOTSegVal('${sk}',${i},'h',this.value)" style="width:100%"/>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--mu);margin-bottom:3px">Multiplier</div>
+            <select onchange="setOTSegVal('${sk}',${i},'r',this.value)" style="width:100%">
+              <option value="1.0" ${seg.r==1.0?'selected':''}>1.0x Normal</option>
+              <option value="1.25" ${seg.r==1.25?'selected':''}>1.25x Quarter</option>
+              <option value="1.5" ${seg.r==1.5?'selected':''}>1.5x Half</option>
+              <option value="2.0" ${seg.r==2.0?'selected':''}>2.0x Double</option>
+            </select>
+          </div>
+        </div>`).join('')}
+      <div style="font-size:11px;color:var(--mu)">Off&#8594;Duty overrides = always <strong style="color:#FBBF24">1.5x all hours</strong> (automatic)</div>
+    </div>`;
+  }).join('');
 }
-function delTp(id){if(confirm('Delete?')){ST.tempPeriods=ST.tempPeriods.filter(t=>t.id!==id);saveST();render();renderTpList();}}
 
-// ── PAT DAY PICKER ─────────────────────────────────────────────────────────
-let pdIdx=null,pdCtx='base';
-function openPdSheet(idx,ctx){
-  pdIdx=idx;pdCtx=ctx;
-  document.getElementById('pdTitle').textContent=`Day ${idx+1}`;
-  const cur=ctx==='tp'?tpEditPat[idx]:editPat[idx];
-  const onSel=k=>{
-    if(pdCtx==='tp'){tpEditPat[pdIdx]=k;renderTpPatDays();}
-    else{editPat[pdIdx]=k;renderPatDays();}
-    renderShiftGrid('pdGrid',k,onSel);
-  };
-  renderShiftGrid('pdGrid',cur,onSel);
-  openSheet('pdSheet');
+function setOTSegs(sk,n){
+  if(!ST.otCfg[sk])ST.otCfg[sk]={segs:[{h:SH[sk].h,r:1.0}]};
+  const cur=ST.otCfg[sk].segs;
+  const sh=SH[sk];const totalH=sh.h;
+  while(cur.length<n)cur.push({h:Math.max(1,Math.floor(totalH/n)),r:1.0});
+  while(cur.length>n)cur.pop();
+  savST();renderOTCfg();
+}
+function setOTSegVal(sk,i,field,val){
+  if(!ST.otCfg[sk])ST.otCfg[sk]={segs:[{h:SH[sk].h,r:1.0}]};
+  ST.otCfg[sk].segs[i][field]=parseFloat(val);
+  savST();
 }
 
-// ── ALARM CONFIG ───────────────────────────────────────────────────────────
-function renderAlarmConfig(){
-  const c=document.getElementById('alarmConfigSection');if(!c)return;
-  const workShifts=Object.entries(SHIFTS).filter(([,s])=>s.start);
+function renderAlmCfg(){
+  const c=document.getElementById('almCfgSection');if(!c)return;
+  const workShifts=Object.entries(SH).filter(([,s])=>s.s);
   c.innerHTML=workShifts.map(([sk,s])=>{
-    const cfg=ST.alarmCfg[sk]||{count:1,base:'05:00',gap:5};
-    const color=SC[sk];const bg=SB[sk];
-    const alarms=alarmsFor(sk);
-    return`<div class="acrd" style="background:${bg};border-left:3px solid ${color}">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <div style="font-size:14px;font-weight:700;color:${color}">${s.emoji} ${s.name}</div>
-        <div style="display:flex;gap:5px">
-          ${[1,2,3].map(n=>`<button onclick="setAlmCount('${sk}',${n})" style="width:26px;height:26px;border-radius:7px;border:1px solid ${cfg.count===n?color:'var(--border)'};background:${cfg.count===n?color:'var(--surf)'};color:${cfg.count===n?'#000':'var(--text)'};font-size:12px;cursor:pointer">${n}</button>`).join('')}
-        </div>
+    const cfg=ST.almCfg[sk]||{c:1,b:'05:00',g:5};const col=SC[sk];const bg=SBG[sk];const alm=alarms(sk);
+    return`<div class="ac" style="background:${bg};border-left:3px solid ${col}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px">
+        <div style="font-size:14px;font-weight:700;color:${col}">${s.e} ${s.n}</div>
+        <div style="display:flex;gap:5px">${[1,2,3].map(n=>`<button onclick="setAlmC('${sk}',${n})" style="width:26px;height:26px;border-radius:7px;border:1px solid ${cfg.c===n?col:'var(--bd)'};background:${cfg.c===n?col:'var(--s1)'};color:${cfg.c===n?'#000':'var(--tx)'};font-size:12px;cursor:pointer">${n}</button>`).join('')}</div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-        <div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Base alarm (latest)</div>
-          <input type="time" value="${cfg.base}" onchange="setAlmBase('${sk}',this.value)" style="width:100%"/>
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Gap between alarms</div>
-          <div style="display:flex;align-items:center;gap:6px">
-            <input type="number" min="1" max="60" value="${cfg.gap||5}" onchange="setAlmGap('${sk}',this.value)" style="width:60px"/>
-            <span style="font-size:12px;color:var(--muted)">min</span>
-          </div>
-        </div>
+        <div><div style="font-size:11px;color:var(--mu);margin-bottom:3px">Base alarm</div><input type="time" value="${cfg.b}" onchange="setAlmB('${sk}',this.value)"/></div>
+        <div><div style="font-size:11px;color:var(--mu);margin-bottom:3px">Gap (min)</div><input type="number" min="1" max="60" value="${cfg.g||5}" onchange="setAlmG('${sk}',this.value)" style="width:100%"/></div>
       </div>
-      <div class="alrow">
-        ${alarms.map((a,i)=>`<div class="altag" style="border-color:${color}30"><div style="font-size:9px;color:${color};font-weight:700">Alarm ${i+1}</div><div style="font-size:11px;color:var(--muted);font-family:'Courier New',monospace">${to12h(a)}</div></div>${i<alarms.length-1?`<div style="font-size:11px;color:var(--muted)">+${cfg.gap||5}m</div>`:''}`).join('')}
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${alm.map((a,i)=>`<div class="atg" style="border-color:${col}30"><div style="font-size:9px;color:${col};font-weight:700">Alarm ${i+1}</div><div style="font-size:11px;color:var(--mu);font-family:'Courier New',monospace">${h12(a)}</div></div>${i<alm.length-1?`<div style="font-size:11px;color:var(--mu);align-self:center">+${cfg.g||5}m</div>`:''}`).join('')}
       </div>
     </div>`;
   }).join('');
 }
 
-function setAlmCount(sk,n){if(!ST.alarmCfg[sk])ST.alarmCfg[sk]={count:1,base:'05:00',gap:5};ST.alarmCfg[sk].count=n;saveST();renderAlarmConfig();render();}
-function setAlmBase(sk,v){if(!ST.alarmCfg[sk])ST.alarmCfg[sk]={count:1,base:v,gap:5};ST.alarmCfg[sk].base=v;saveST();renderAlarmConfig();render();}
-function setAlmGap(sk,v){if(!ST.alarmCfg[sk])ST.alarmCfg[sk]={count:1,base:'05:00',gap:5};ST.alarmCfg[sk].gap=Math.max(1,parseInt(v)||5);saveST();renderAlarmConfig();render();}
+function setAlmC(sk,n){if(!ST.almCfg[sk])ST.almCfg[sk]={c:1,b:'05:00',g:5};ST.almCfg[sk].c=n;savST();renderAlmCfg();render();}
+function setAlmB(sk,v){if(!ST.almCfg[sk])ST.almCfg[sk]={c:1,b:v,g:5};ST.almCfg[sk].b=v;savST();renderAlmCfg();render();}
+function setAlmG(sk,v){if(!ST.almCfg[sk])ST.almCfg[sk]={c:1,b:'05:00',g:5};ST.almCfg[sk].g=Math.max(1,parseInt(v)||5);savST();renderAlmCfg();render();}
 
-// ── SETTINGS ───────────────────────────────────────────────────────────────
-function loadSettings(){
-  document.getElementById('cycleStartInput').value=ST.cycleStart;
-  renderAlarmConfig();
-  document.getElementById('yr').textContent=new Date().getFullYear();
+function resetOv(){if(confirm('Clear all overrides, notes, highlights?')){ST.ov={};ST.ht={};ST.nt={};ST.hl={};savST();render();}}
+function resetAll(){if(confirm('Full reset?')){Object.assign(ST,{cs:'2026-05-10',pat:['morning','morning','morning','night','night','night','off','off','afternoon','afternoon','afternoon','off'],ov:{},nt:{},hl:{},tp:[],almCfg:JSON.parse(JSON.stringify(DEF_ALM_CFG)),otCfg:JSON.parse(JSON.stringify(DEF_OT_CFG)),otRate:12,lastSync:null});savST();render();}}
+
+// ── OVERTIME PAGE ─────────────────────────────────────────────────────────────
+function renderOTPage(){
+  const today=new Date();today.setHours(0,0,0,0);
+  // Default: current month
+  const mStart=new Date(today.getFullYear(),today.getMonth(),1);
+  const mEnd=new Date(today.getFullYear(),today.getMonth()+1,0);
+  const mStartDs=dk(mStart),mEndDs=dk(mEnd);
+
+  const c=document.getElementById('otContent');
+  c.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-size:18px;font-weight:700">&#128181; Overtime Calculator</div>
+    </div>
+    <div style="background:var(--s2);border-radius:12px;padding:12px;margin-bottom:12px">
+      <div style="font-size:12px;color:var(--mu);margin-bottom:8px">Calculate for date range</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+        <div><div style="font-size:12px;color:var(--mu);margin-bottom:3px">From</div><input type="date" id="otFrom" value="${mStartDs}" onchange="refreshOT()"/></div>
+        <div><div style="font-size:12px;color:var(--mu);margin-bottom:3px">To</div><input type="date" id="otTo" value="${mEndDs}" onchange="refreshOT()"/></div>
+      </div>
+    </div>
+    <div id="otResult"></div>`;
+
+  refreshOT();
 }
-function saveCycleStart(v){ST.cycleStart=v;saveST();render();}
-function resetOverrides(){if(confirm('Clear all overrides?')){ST.overrides={};ST.highlights={};ST.notes={};saveST();render();}}
-function resetAll(){if(confirm('Full reset? All data will be lost.')){Object.assign(ST,{cycleStart:'2026-05-10',pattern:['morning','morning','morning','night','night','night','off','off','afternoon','afternoon','afternoon','off'],overrides:{},notes:{},highlights:{},tempPeriods:[],alarmCfg:JSON.parse(JSON.stringify(DEF_ALM)),lastSync:null});saveST();render();}}
 
-// ── ICS EXPORT ─────────────────────────────────────────────────────────────
+function refreshOT(){
+  const fromEl=document.getElementById('otFrom');
+  const toEl=document.getElementById('otTo');
+  if(!fromEl||!toEl)return;
+  const res=calcOT(fromEl.value,toEl.value);
+  const r=document.getElementById('otResult');if(!r)return;
+
+  const rate=res.rate;
+  const hasOT=res.otH>0;
+
+  let html=`
+    <div class="otsum">
+      <div style="font-size:12px;color:var(--mu);margin-bottom:4px">TOTAL HOURS WORKED</div>
+      <div style="font-size:32px;font-weight:800;color:#FBBF24">${res.totalH.toFixed(1)}h</div>
+      <div style="font-size:13px;color:var(--mu);margin-top:4px">Est. Pay: <strong style="color:#E8E8F8">&#163;${res.totalPay.toFixed(2)}</strong> @ &#163;${rate}/hr base</div>
+      ${hasOT?`<div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(251,191,36,0.3)"><div style="font-size:11px;color:var(--mu)">Overtime hours</div><div style="font-size:20px;font-weight:700;color:#FBBF24">${res.otH.toFixed(1)}h OT</div></div>`:''}
+    </div>`;
+
+  // Breakdown by shift type
+  const byType={};
+  res.days.forEach(d=>{
+    if(!byType[d.sk])byType[d.sk]={count:0,h:0,pay:0,otCount:0,segs:d.segs};
+    byType[d.sk].count++;byType[d.sk].h+=d.dayH;byType[d.sk].pay+=d.dayPay;
+    if(d.isOT)byType[d.sk].otCount++;
+  });
+
+  html+=`<div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.08em;text-transform:uppercase;margin:14px 0 7px">Breakdown by Shift</div>`;
+  html+=`<div style="background:var(--s1);border-radius:12px;overflow:hidden;margin-bottom:12px">`;
+  Object.entries(byType).forEach(([sk,data])=>{
+    const sh=SH[sk];const col=SC[sk];const bg=SBG[sk];
+    const segStr=data.segs.map(seg=>`${seg.h}h@${seg.r}x`).join(' + ');
+    html+=`<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--bd)">
+      <div style="font-size:22px">${sh.e}</div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:700;color:${col}">${sh.n}</div>
+        <div style="font-size:11px;color:var(--mu);margin-top:1px">${data.count} day${data.count>1?'s':''} &middot; ${segStr}</div>
+        ${data.otCount?`<div style="font-size:11px;color:#FBBF24;margin-top:1px">${data.otCount} OT day${data.otCount>1?'s':''}</div>`:''}
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:15px;font-weight:700;color:${col}">${data.h.toFixed(1)}h</div>
+        <div style="font-size:12px;color:var(--mu)">&#163;${data.pay.toFixed(2)}</div>
+      </div>
+    </div>`;
+  });
+  html+=`</div>`;
+
+  // Day by day list — only show OT days and work days
+  const workDays=res.days.filter(d=>d.dayH>0);
+  if(workDays.length){
+    html+=`<div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px">Day by Day</div>`;
+    html+=`<div style="background:var(--s1);border-radius:12px;overflow:hidden">`;
+    workDays.forEach(d=>{
+      const sh=SH[d.sk];const col=SC[d.sk];const date=pd(d.ds);
+      const segStr=d.segs.map(seg=>`${seg.h}h\xd7${seg.r}`).join('+');
+      html+=`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--bd)${d.isOT?';background:rgba(251,191,36,0.05)':''}">
+        <div style="font-size:18px">${sh.e}</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:${col}">${date.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}${d.isOT?' <span style="font-size:10px;color:#FBBF24;font-weight:700;background:rgba(251,191,36,0.15);padding:1px 5px;border-radius:4px">OT</span>':''}</div>
+          <div style="font-size:11px;color:var(--mu)">${segStr}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:14px;font-weight:700;color:${col}">${d.dayH}h</div>
+          <div style="font-size:11px;color:var(--mu)">&#163;${d.dayPay.toFixed(2)}</div>
+        </div>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+
+  html+=`<div style="text-align:center;padding:16px 0;font-size:11px;color:#3A3A55">&copy; ${new Date().getFullYear()} Sayed Baqer Alseb3 Limited. All rights reserved.</div>`;
+  r.innerHTML=html;
+}
+
+// ── ICS EXPORT ────────────────────────────────────────────────────────────────
 document.getElementById('exportRow').onclick=exportICS;
 function exportICS(){
   const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//ShiftCal//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:My Shift Schedule'];
@@ -985,59 +1063,56 @@ function exportICS(){
   const end=new Date(today);end.setMonth(end.getMonth()+12);
   let cur=new Date(today);
   while(cur<end){
-    const dateStr=dk(cur);const sk=getShift(dateStr);const s=SHIFTS[sk];
-    if(s&&s.start){
-      const alarms=alarmsFor(sk);
-      const[sy,sm,sd]=dateStr.split('-');
-      const dtS=`${sy}${sm}${sd}T${s.start.replace(':','')}00`;
-      let eDk=dateStr;if(s.nd){const nd=addD(cur,1);eDk=dk(nd);}
-      const[ey,em,ed]=eDk.split('-');const dtE=`${ey}${em}${ed}T${s.end.replace(':','')}00`;
-      const note=ST.notes[dateStr];
-      lines.push('BEGIN:VEVENT',`UID:sc-${dateStr}-${sk}@shiftcal`,`DTSTART:${dtS}`,`DTEND:${dtE}`,`SUMMARY:${s.emoji} ${s.name}`,`DESCRIPTION:${note||s.name+' shift'}`,'STATUS:CONFIRMED');
-      alarms.forEach((a,i)=>{lines.push('BEGIN:VALARM','ACTION:AUDIO',`TRIGGER:-PT${calcMins(a,s.start)}M`,`DESCRIPTION:Alarm ${i+1}`,'END:VALARM');});
+    const ds=dk(cur);const sk=getShift(ds);const s=SH[sk];
+    if(s?.s){
+      const alm=alarms(sk);const[sy,sm,sd]=ds.split('-');
+      const dtS=`${sy}${sm}${sd}T${s.s.replace(':','')}00`;
+      let eDk=ds;if(s.nd){eDk=dk(aD(cur,1));}
+      const[ey,em,ed]=eDk.split('-');const dtE=`${ey}${em}${ed}T${s.f.replace(':','')}00`;
+      const nt=ST.nt[ds];
+      lines.push('BEGIN:VEVENT',`UID:sc-${ds}-${sk}@shiftcal`,`DTSTART:${dtS}`,`DTEND:${dtE}`,`SUMMARY:${s.e} ${s.n}`,`DESCRIPTION:${nt||s.n+' shift'}`,'STATUS:CONFIRMED');
+      alm.forEach((a,i)=>{lines.push('BEGIN:VALARM','ACTION:AUDIO',`TRIGGER:-PT${cMin(a,s.s)}M`,`DESCRIPTION:Alarm ${i+1}`,'END:VALARM');});
       lines.push('END:VEVENT');
     }
-    cur=addD(cur,1);
+    cur=aD(cur,1);
   }
   lines.push('END:VCALENDAR');
-  const icsContent=lines.join('\r\n');
-  // Use data URI - works without download prompt issues
-  const b64=btoa(unescape(encodeURIComponent(icsContent)));
-  const dataUri='data:text/calendar;base64,'+b64;
-  const a=document.createElement('a');a.href=dataUri;a.download='ShiftCalendar.ics';a.click();
+  const b64=btoa(unescape(encodeURIComponent(lines.join('\r\n'))));
+  const a=document.createElement('a');a.href='data:text/calendar;base64,'+b64;a.download='ShiftCalendar.ics';a.click();
 }
 
-// ── SHORTCUT SCRIPT ────────────────────────────────────────────────────────
+// ── SHORTCUTS SCRIPT ──────────────────────────────────────────────────────────
 document.getElementById('syncRow').onclick=openScSheet;
 function openScSheet(){
-  const len=ST.pattern.length,cs=ST.cycleStart;
-  const groups={};ST.pattern.forEach((k,i)=>{if(!groups[k])groups[k]=[];groups[k].push(i);});
-  let sc=`# ShiftCal Auto-Sync Script\n# Generated: ${new Date().toLocaleDateString()}\n# ${len}-day cycle from ${cs}\n\n`;
-  sc+=`[1] Get Current Date → "Today"\n[2] Adjust Date: Today +1 Day → "Tomorrow"\n[3] Calculate: days_between("${cs}", Tomorrow) mod ${len} → "CycleDay"\n\n`;
-  sc+=`[4] Get Alarms where Label contains "ShiftCal-"\n    For each disabled alarm → Delete it\n\n`;
-  const workE=Object.entries(groups).filter(([k])=>SHIFTS[k]?.start);
-  workE.forEach(([sk,days],idx)=>{
-    const s=SHIFTS[sk];const alarms=alarmsFor(sk);
-    sc+=`[${5+idx}] ${idx===0?'If':'Otherwise If'} CycleDay in [${days.join(',')}]\n`;
-    sc+=`    # ${s.name} ${s.start}–${s.end}\n`;
-    sc+=`    If no alarm labelled "ShiftCal-${sk.toUpperCase()}-1" exists:\n`;
-    alarms.forEach((a,i)=>sc+=`      Create Alarm: ${a} — "ShiftCal-${sk.toUpperCase()}-${i+1}"\n`);
-    sc+=`    Add Calendar Event: "${s.emoji} ${s.name}" Tomorrow ${s.start}–${s.end}\n\n`;
+  const len=ST.pat.length,cs=ST.cs;
+  const groups={};ST.pat.forEach((k,i)=>{if(!groups[k])groups[k]=[];groups[k].push(i);});
+  let sc=`# ShiftCal Sync\n# ${new Date().toLocaleDateString()} | ${len}-day cycle from ${cs}\n\n`;
+  sc+=`[1] Get Current Date → "Today"\n[2] Adjust: Today +1 Day → "Tomorrow"\n[3] Calculate: days_between("${cs}", Tomorrow) mod ${len} → "CycleDay"\n\n`;
+  sc+=`[4] Get Alarms where Label contains "ShiftCal-"\n    For each disabled alarm → Delete\n\n`;
+  const we=Object.entries(groups).filter(([k])=>SH[k]?.s);
+  we.forEach(([sk,days],i)=>{
+    const s=SH[sk];const alm=alarms(sk);
+    sc+=`[${5+i}] ${i===0?'If':'Otherwise If'} CycleDay in [${days.join(',')}]\n`;
+    sc+=`    # ${s.n} (${s.s}\u2013${s.f})\n`;
+    sc+=`    If no "ShiftCal-${sk.toUpperCase()}-1" alarm exists:\n`;
+    alm.forEach((a,j)=>sc+=`      Create Alarm: ${a} — "ShiftCal-${sk.toUpperCase()}-${j+1}"\n`);
+    sc+=`    Add Calendar Event: "${s.e} ${s.n}" Tomorrow ${s.s}\u2013${s.f}\n\n`;
   });
-  sc+=`[${5+workE.length}] Show Notification: "ShiftCal ✓ Alarms set"\n\n`;
-  sc+=`AUTOMATION: Shortcuts → Automation → Time of Day\n12:00 AM · Daily · Ask Before Running: OFF`;
-  document.getElementById('scOutput').textContent=sc;
-  openSheet('scSheet');
+  sc+=`[${5+we.length}] Show Notification: "ShiftCal \u2713"\n\nAUTOMATION: Automation \u2192 + \u2192 Time of Day \u2192 12:00 AM \u2192 Daily \u2192 Ask Before Running: OFF`;
+  document.getElementById('scOut').textContent=sc;
+  openOv('scOv');
 }
-function copyScript(){
-  const text=document.getElementById('scOutput').textContent;
-  if(navigator.clipboard)navigator.clipboard.writeText(text).catch(()=>fallbackCopyText(text));
-  else fallbackCopyText(text);
-  const b=document.getElementById('scCopyBtn');b.textContent='✓ Copied!';setTimeout(()=>{b.innerHTML='&#128203; Copy Script';},2000);
+function cpScript(){
+  const text=document.getElementById('scOut').textContent;silentCopy(text);
+  const b=document.getElementById('scCpBtn');b.textContent='\u2713 Copied!';setTimeout(()=>{b.innerHTML='&#128203; Copy Script';},2000);
 }
-function fallbackCopyText(text){const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}document.body.removeChild(ta);}
 
-// ── BOOT ───────────────────────────────────────────────────────────────────
+// ── BOOT ──────────────────────────────────────────────────────────────────────
+document.getElementById('prevBtn').onclick=()=>{VM--;if(VM<0){VM=11;VY--;}render();};
+document.getElementById('nextBtn').onclick=()=>{VM++;if(VM>11){VM=0;VY++;}render();};
+document.getElementById('todayBtn').onclick=()=>{const n=new Date();VY=n.getFullYear();VM=n.getMonth();render();};
+document.getElementById('patBtn').onclick=openPat;
+
 loadST();
 document.getElementById('yr').textContent=new Date().getFullYear();
 render();
