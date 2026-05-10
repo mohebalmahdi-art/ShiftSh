@@ -78,6 +78,7 @@ transition:border-color .12s;
 .cd.ot{/* overtime */}
 .cd.ot::before{content:’$’;position:absolute;top:2px;right:3px;font-size:8px;font-weight:700;color:#FBBF24;}
 .cd.hn::after{content:’’;position:absolute;top:3px;left:3px;width:5px;height:5px;border-radius:50%;background:#FBBF24;}
+.cd.ph-day{box-shadow:inset 0 0 0 2px rgba(6,182,212,0.5);}
 .dn{font-size:12px;font-weight:600;width:20px;height:20px;display:flex;align-items:center;justify-content:center;}
 .de{font-size:12px;line-height:1;}
 .da{font-size:7px;color:var(–mu);font-family:‘Courier New’,monospace;line-height:1.2;text-align:center;}
@@ -336,6 +337,15 @@ input[type=number]{width:80px;text-align:center;}
         </div>
       </div>
     </div>
+    <div style="margin-top:10px;padding:10px 0;border-top:1px solid var(--bd)">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:14px;font-weight:600">Public Holiday</div>
+          <div style="font-size:12px;color:var(--mu);margin-top:1px">Marks this day as PH — 1.5× all duty hours</div>
+        </div>
+        <div class="tg" id="phTog" onclick="togPH()"></div>
+      </div>
+    </div>
     <div style="margin-top:13px;margin-bottom:5px;font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.07em;text-transform:uppercase">Note</div>
     <textarea id="dayNote" placeholder="Add a note for this day..."></textarea>
     <div style="margin-top:13px;margin-bottom:8px;font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.07em;text-transform:uppercase">Apply to date range</div>
@@ -531,7 +541,8 @@ let ST={
   otCfg:JSON.parse(JSON.stringify(DEF_OT_CFG)),
   otRate:0.317,
   otCurr:'BHD',
-  manualOT:{},  // {ds: true/false} — user explicitly set OT or not
+  manualOT:{},  // {ds: true/false}
+  ph:{},          // {ds: true} — public holidays
   lastSync:null,
 };
 function loadST(){
@@ -540,6 +551,7 @@ function loadST(){
     if(!ST.otCfg)ST.otCfg=JSON.parse(JSON.stringify(DEF_OT_CFG));
     if(!ST.nt)ST.nt={};if(!ST.hl)ST.hl={};
     if(!ST.manualOT)ST.manualOT={};
+    if(!ST.ph)ST.ph={};
   }}catch(e){}
 }
 function savST(){try{localStorage.setItem('sc_v8',JSON.stringify(ST));}catch(e){}}
@@ -621,7 +633,7 @@ function calcOT(startDs, endDs){
   const from=pd(startDs),to=pd(endDs);
   const rate=parseFloat(ST.otRate)||0.317;
   const days=[];
-  let totalH=0,totalPay=0,otH=0,otPay=0;
+  let totalH=0,totalPay=0,otH=0,otPay=0,phH=0,phPay=0;
   let cur=new Date(from);
   while(cur<=to){
     const ds=dk(cur);
@@ -658,11 +670,20 @@ function calcOT(startDs, endDs){
       const dayOtPay=otSegs.reduce((a,s)=>a+s.h*rate*s.r,0);
       totalH+=dayH;totalPay+=dayPay;
       if(otFlag){otH+=dayOtH;otPay+=dayOtPay;}
-      days.push({ds,sk,sh,segs:allSegs,otSegs,normalSegs,dayH,dayOtH,dayPay,isOT:otFlag,baseSk});
+      // Public holiday: entire duty counted at 1.5x regardless of normal/OT
+      const isPH=!!ST.ph[ds];
+      let phPay2=0;
+      if(isPH&&sh.s){
+        phPay2=sh.h*rate*1.5;
+        phH+=sh.h;phPay+=phPay2;
+        // Override pay to PH rate
+        totalPay-=dayPay;totalPay+=phPay2;
+      }
+      days.push({ds,sk,sh,segs:allSegs,otSegs,normalSegs,dayH,dayOtH,dayPay:isPH?phPay2:dayPay,dayOtPay,isOT:otFlag,isPH,phPay:phPay2,baseSk});
     }
     cur=aD(cur,1);
   }
-  return{days,totalH,totalPay,otH,otPay,rate};
+  return{days,totalH,totalPay,otH,otPay,phH,phPay,rate};
 }
 
 // ── VIEW STATE ───────────────────────────────────────────────────────────────
@@ -701,6 +722,7 @@ function mkCell(date,other,tds){
   const otDay=isOT(ds);
 
   const cell=document.createElement('div');
+  const isPHday=!!ST.ph[ds];
   let cls='cd';
   if(other)cls+=' xo';
   if(isToday)cls+=' tod';
@@ -708,6 +730,7 @@ function mkCell(date,other,tds){
   if(hasNote)cls+=' hn';
   if(isSel)cls+=' sel';
   if(otDay)cls+=' ot';
+  if(isPHday)cls+=' ph-day';
   cell.className=cls;
 
   // Background: highlight class overrides shift bg
@@ -731,6 +754,12 @@ function mkCell(date,other,tds){
     da.textContent=h12(alm[alm.length-1])+(alm.length>1?` +${alm.length-1}`:'');
     cell.appendChild(da);
   }
+  if(isPHday&&!other){
+    const phBadge=document.createElement('div');
+    phBadge.style.cssText='position:absolute;bottom:2px;left:2px;font-size:7px;color:#06B6D4;font-weight:700;line-height:1;';
+    phBadge.textContent='PH';
+    cell.appendChild(phBadge);
+  }
   return cell;
 }
 
@@ -739,7 +768,7 @@ function renderStrip(tds){
   const col=SC[sk]||'#4B5563';const bg=SBG[sk]||'#111118';
   const alm=alarms(sk);
   const tmr=dk(aD(pd(tds),1));const tmrSk=getShift(tmr);const tmrSh=SH[tmrSk]||SH.off;const tmrCol=SC[tmrSk]||'#4B5563';const tmrAlm=alarms(tmrSk);
-  const nt=ST.nt[tds];const ot=isOT(tds);
+  const nt=ST.nt[tds];const ot=isOT(tds);const ph=!!ST.ph[tds];
   document.getElementById('todayStrip').innerHTML=
     `<div class="ts" style="background:${bg};border:1px solid ${col}22" onclick="openDaySheet('${tds}')">
       <div style="font-size:30px">${sh.e}</div>
@@ -817,6 +846,10 @@ function openDaySheet(ds){
   editHL=ST.hl[ds]||'';updateHL(editHL);
   document.getElementById('rFrom').value=ds;document.getElementById('rTo').value=ds;
 
+  // Load PH toggle
+  const phTog=document.getElementById('phTog');
+  if(phTog)phTog.classList.toggle('on',!!ST.ph[ds]);
+
   // Show OT toggle only if day has a work shift
   const sk0=getShift(ds);
   const otRow=document.getElementById('otToggleRow');
@@ -850,6 +883,15 @@ function updateHL(hl){
   });
 }
 function setHL(h){editHL=h;updateHL(h);}
+function togPH(){
+  const tog=document.getElementById('phTog');
+  if(!editDs)return;
+  const isOn=!tog.classList.contains('on');
+  tog.classList.toggle('on',isOn);
+  if(isOn)ST.ph[editDs]=true;else delete ST.ph[editDs];
+  // PH applies immediately (single day only, not range)
+  savST();render();
+}
 function setManualOT(v){
   // Store immediately so OT indicator updates when applied
   if(editDs){
@@ -889,7 +931,7 @@ function applyOv(){
 function clearOv(){
   const from=pd(document.getElementById('rFrom').value);
   const to=pd(document.getElementById('rTo').value);
-  let c=new Date(from);while(c<=to){const ds2=dk(c);delete ST.ov[ds2];delete ST.hl[ds2];delete ST.nt[ds2];delete ST.manualOT[ds2];c=aD(c,1);}
+  let c=new Date(from);while(c<=to){const ds2=dk(c);delete ST.ov[ds2];delete ST.hl[ds2];delete ST.nt[ds2];delete ST.manualOT[ds2];delete ST.ph[ds2];c=aD(c,1);}
   savST();selDay=null;render();closeOv('dayOv');
 }
 
@@ -1096,7 +1138,7 @@ function setAlmB(sk,v){if(!ST.almCfg[sk])ST.almCfg[sk]={c:1,b:v,g:5};ST.almCfg[s
 function setAlmG(sk,v){if(!ST.almCfg[sk])ST.almCfg[sk]={c:1,b:'05:00',g:5};ST.almCfg[sk].g=Math.max(1,parseInt(v)||5);savST();renderAlmCfg();render();}
 
 function resetOv(){if(confirm('Clear all overrides, notes, highlights?')){ST.ov={};ST.ht={};ST.nt={};ST.hl={};savST();render();}}
-function resetAll(){if(confirm('Full reset?')){Object.assign(ST,{cs:'2026-05-10',pat:['morning','morning','morning','night','night','night','off','off','afternoon','afternoon','afternoon','off'],ov:{},nt:{},hl:{},tp:[],manualOT:{},almCfg:JSON.parse(JSON.stringify(DEF_ALM_CFG)),otCfg:JSON.parse(JSON.stringify(DEF_OT_CFG)),otRate:0.317,otCurr:'BHD',lastSync:null});savST();render();}}
+function resetAll(){if(confirm('Full reset?')){Object.assign(ST,{cs:'2026-05-10',pat:['morning','morning','morning','night','night','night','off','off','afternoon','afternoon','afternoon','off'],ov:{},nt:{},hl:{},tp:[],manualOT:{},ph:{},almCfg:JSON.parse(JSON.stringify(DEF_ALM_CFG)),otCfg:JSON.parse(JSON.stringify(DEF_OT_CFG)),otRate:0.317,otCurr:'BHD',lastSync:null});savST();render();}}
 
 // ── OVERTIME PAGE ─────────────────────────────────────────────────────────────
 function renderOTPage(){
@@ -1127,109 +1169,148 @@ function refreshOT(){
   const fromEl=document.getElementById('otFrom');
   const toEl=document.getElementById('otTo');
   if(!fromEl||!toEl)return;
-  const res=calcOT(fromEl.value,toEl.value);
-  const r=document.getElementById('otResult');if(!r)return;
+  try{
+    const res=calcOT(fromEl.value,toEl.value);
+    const r=document.getElementById('otResult');if(!r)return;
+    const rate=res.rate;
+    const curr=getCurrSymbol(ST.otCurr||'BHD');
+    const otDays=res.days.filter(function(d){return d.isOT&&d.dayOtH>0;});
+    const phDays=res.days.filter(function(d){return d.isPH&&d.dayH>0;});
+    const hasOT=otDays.length>0;
+    const hasPH=phDays.length>0;
+    const normalH=res.totalH-res.otH-res.phH;
 
-  const rate=res.rate;
-  const curr=getCurrSymbol(ST.otCurr||'BHD');
-  const otDays=res.days.filter(d=>d.isOT&&d.dayOtH>0);
-  const hasOT=otDays.length>0;
+    let html='';
 
-  // Summary card — split normal vs OT clearly
-  const normalH=res.totalH-res.otH;
-  const normalPay=res.totalPay-res.otPay;
+    // ── SUMMARY ──
+    html+='<div class="otsum">';
+    html+='<div style="font-size:12px;color:var(--mu);margin-bottom:8px;text-transform:uppercase;letter-spacing:.07em">Period Summary</div>';
+    html+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">';
+    html+='<div style="background:rgba(0,0,0,.25);border-radius:10px;padding:9px;text-align:center">';
+    html+='<div style="font-size:9px;color:var(--mu);margin-bottom:2px">OT HOURS</div>';
+    html+='<div style="font-size:22px;font-weight:800;color:#FBBF24">'+res.otH.toFixed(1)+'h</div>';
+    html+='<div style="font-size:10px;color:var(--mu);margin-top:1px">'+curr+res.otPay.toFixed(3)+'</div>';
+    html+='</div>';
+    html+='<div style="background:rgba(0,0,0,.25);border-radius:10px;padding:9px;text-align:center">';
+    html+='<div style="font-size:9px;color:var(--mu);margin-bottom:2px">PH HOURS</div>';
+    html+='<div style="font-size:22px;font-weight:800;color:#06B6D4">'+res.phH.toFixed(1)+'h</div>';
+    html+='<div style="font-size:10px;color:var(--mu);margin-top:1px">'+curr+res.phPay.toFixed(3)+'</div>';
+    html+='</div>';
+    html+='<div style="background:rgba(0,0,0,.25);border-radius:10px;padding:9px;text-align:center">';
+    html+='<div style="font-size:9px;color:var(--mu);margin-bottom:2px">TOTAL</div>';
+    html+='<div style="font-size:22px;font-weight:800;color:#E8E8F8">'+res.totalH.toFixed(1)+'h</div>';
+    html+='<div style="font-size:10px;color:var(--mu);margin-top:1px">'+curr+res.totalPay.toFixed(3)+'</div>';
+    html+='</div>';
+    html+='</div>';
+    html+='<div style="font-size:12px;color:var(--mu)">Normal: <strong style="color:var(--tx)">'+normalH.toFixed(1)+'h</strong> &nbsp;·&nbsp; Work days: <strong style="color:var(--tx)">'+res.days.filter(function(d){return d.dayH>0;}).length+'</strong></div>';
+    html+='</div>';
 
-  let html=`
-    <div class="otsum">
-      <div style="font-size:12px;color:var(--mu);margin-bottom:2px;text-transform:uppercase;letter-spacing:.07em">Overtime Summary</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
-        <div style="background:rgba(0,0,0,.2);border-radius:10px;padding:10px;text-align:center">
-          <div style="font-size:10px;color:var(--mu);margin-bottom:3px">OT HOURS</div>
-          <div style="font-size:26px;font-weight:800;color:#FBBF24">${res.otH.toFixed(1)}h</div>
-          <div style="font-size:11px;color:var(--mu);margin-top:2px">${curr}${res.otPay.toFixed(3)}</div>
-        </div>
-        <div style="background:rgba(0,0,0,.2);border-radius:10px;padding:10px;text-align:center">
-          <div style="font-size:10px;color:var(--mu);margin-bottom:3px">OT DAYS</div>
-          <div style="font-size:26px;font-weight:800;color:#FBBF24">${otDays.length}</div>
-          <div style="font-size:11px;color:var(--mu);margin-top:2px">days with OT</div>
-        </div>
-      </div>
-      <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(251,191,36,.2);display:flex;justify-content:space-between;align-items:center">
-        <div style="font-size:12px;color:var(--mu)">Total hours worked: <strong style="color:var(--tx)">${res.totalH.toFixed(1)}h</strong></div>
-        <div style="font-size:12px;color:var(--mu)">Normal: <strong style="color:var(--tx)">${normalH.toFixed(1)}h</strong></div>
-      </div>
-    </div>`;
+    // ── NO OT/PH ──
+    if(!hasOT&&!hasPH){
+      html+='<div style="background:var(--s2);border-radius:12px;padding:18px;text-align:center;margin-bottom:12px">';
+      html+='<div style="font-size:26px;margin-bottom:6px">✓</div>';
+      html+='<div style="font-size:15px;font-weight:700;color:#10B981">No Overtime or Public Holidays</div>';
+      html+='<div style="font-size:12px;color:var(--mu);margin-top:4px">All work days in this period are normal duty.</div>';
+      html+='</div>';
+    }
 
-  // Only show OT days section if there are any
-  if(!hasOT){
-    html+=`<div style="background:var(--s2);border-radius:12px;padding:20px;text-align:center;margin-bottom:12px">
-      <div style="font-size:28px;margin-bottom:8px">✓</div>
-      <div style="font-size:15px;font-weight:700;color:#10B981">No Overtime</div>
-      <div style="font-size:13px;color:var(--mu);margin-top:4px">No overtime days in this period.</div>
-    </div>`;
-  } else {
-    // OT days only
-    html+=`<div style="font-size:11px;font-weight:700;color:#FBBF24;letter-spacing:.08em;text-transform:uppercase;margin:14px 0 7px">Overtime Days</div>`;
-    html+=`<div style="background:var(--s1);border-radius:12px;overflow:hidden;margin-bottom:12px">`;
-    otDays.forEach(d=>{
-      const sh=SH[d.sk];const col=SC[d.sk];const date=pd(d.ds);
-      const otSegStr=d.otSegs.map(seg=>`${seg.h}h×${seg.r}x`).join('+');
-      const baseSh=SH[d.baseSk];
-      const reason=!baseSh?.s?'Off→Duty':`${d.normalSegs.reduce((a,s)=>a+s.h,0).toFixed(1)}h normal + ${d.dayOtH.toFixed(1)}h extra`;
-      html+=`<div style="padding:11px 14px;border-bottom:1px solid var(--bd);background:rgba(251,191,36,.04)">
-        <div style="display:flex;align-items:center;gap:10px">
-          <div style="font-size:20px">${sh.e}</div>
-          <div style="flex:1">
-            <div style="font-size:13px;font-weight:700;color:${col}">${date.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}</div>
-            <div style="font-size:11px;color:var(--mu);margin-top:1px">${reason}</div>
-          </div>
-          <div style="text-align:right">
-            <div style="font-size:14px;font-weight:800;color:#FBBF24">${d.dayOtH.toFixed(1)}h OT</div>
-            <div style="font-size:11px;color:var(--mu)">${curr}${d.dayOtPay.toFixed(3)}</div>
-          </div>
-        </div>
-        <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
-          ${d.segs.map(seg=>`<div style="background:${seg.label&&seg.label.includes('OT')||seg.label&&seg.label.includes('Duty')?'rgba(251,191,36,.12)':'rgba(255,255,255,.05)'};border-radius:6px;padding:3px 8px;font-size:11px;color:${seg.label&&(seg.label.includes('OT')||seg.label.includes('Duty'))?'#FBBF24':'var(--mu)'}">${seg.h}h × ${seg.r}x ${seg.label?'('+seg.label+')':''}</div>`).join('')}
-        </div>
-      </div>`;
+    // ── PUBLIC HOLIDAY DAYS ──
+    if(hasPH){
+      html+='<div style="font-size:11px;font-weight:700;color:#06B6D4;letter-spacing:.08em;text-transform:uppercase;margin:14px 0 7px">Public Holiday Days</div>';
+      html+='<div style="background:var(--s1);border-radius:12px;overflow:hidden;margin-bottom:12px">';
+      phDays.forEach(function(d){
+        var sh=SH[d.sk];var col=SC[d.sk];var date=pd(d.ds);
+        html+='<div style="padding:11px 14px;border-bottom:1px solid var(--bd);background:rgba(6,182,212,.04)">';
+        html+='<div style="display:flex;align-items:center;gap:10px">';
+        html+='<div style="font-size:20px">🏖️</div>';
+        html+='<div style="flex:1">';
+        html+='<div style="font-size:13px;font-weight:700;color:#06B6D4">'+date.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})+'</div>';
+        html+='<div style="font-size:11px;color:var(--mu);margin-top:1px">'+sh.n+' &nbsp;·&nbsp; Public Holiday &nbsp;·&nbsp; 1.5× all hours</div>';
+        html+='</div>';
+        html+='<div style="text-align:right">';
+        html+='<div style="font-size:14px;font-weight:800;color:#06B6D4">'+d.dayH.toFixed(1)+'h</div>';
+        html+='<div style="font-size:11px;color:var(--mu)">'+curr+d.phPay.toFixed(3)+'</div>';
+        html+='</div>';
+        html+='</div>';
+        html+='</div>';
+      });
+      html+='</div>';
+    }
+
+    // ── OT DAYS ──
+    if(hasOT){
+      html+='<div style="font-size:11px;font-weight:700;color:#FBBF24;letter-spacing:.08em;text-transform:uppercase;margin:14px 0 7px">Overtime Days</div>';
+      html+='<div style="background:var(--s1);border-radius:12px;overflow:hidden;margin-bottom:12px">';
+      otDays.forEach(function(d){
+        var sh=SH[d.sk];var col=SC[d.sk];var date=pd(d.ds);
+        var baseSh=SH[d.baseSk];
+        var reason=!baseSh||!baseSh.s?'Off\u2192Duty (all hours OT)':d.normalSegs.reduce(function(a,s){return a+s.h;},0).toFixed(1)+'h normal + '+d.dayOtH.toFixed(1)+'h extra';
+        html+='<div style="padding:11px 14px;border-bottom:1px solid var(--bd);background:rgba(251,191,36,.04)">';
+        html+='<div style="display:flex;align-items:center;gap:10px">';
+        html+='<div style="font-size:20px">'+sh.e+'</div>';
+        html+='<div style="flex:1">';
+        html+='<div style="font-size:13px;font-weight:700;color:'+col+'">'+date.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})+'</div>';
+        html+='<div style="font-size:11px;color:var(--mu);margin-top:1px">'+reason+'</div>';
+        html+='</div>';
+        html+='<div style="text-align:right">';
+        html+='<div style="font-size:14px;font-weight:800;color:#FBBF24">'+d.dayOtH.toFixed(1)+'h OT</div>';
+        html+='<div style="font-size:11px;color:var(--mu)">'+curr+d.dayOtPay.toFixed(3)+'</div>';
+        html+='</div>';
+        html+='</div>';
+        // Segs
+        html+='<div style="margin-top:6px;display:flex;gap:5px;flex-wrap:wrap">';
+        d.segs.forEach(function(seg){
+          var isOTSeg=seg.label&&(seg.label.indexOf('OT')>=0||seg.label.indexOf('Duty')>=0);
+          html+='<div style="background:'+(isOTSeg?'rgba(251,191,36,.12)':'rgba(255,255,255,.05)')+';border-radius:5px;padding:2px 7px;font-size:10px;color:'+(isOTSeg?'#FBBF24':'var(--mu)')+'">'+seg.h+'h \u00d7 '+seg.r+'x'+(seg.label?' ('+seg.label+')':'')+'</div>';
+        });
+        html+='</div>';
+        html+='</div>';
+      });
+      html+='</div>';
+    }
+
+    // ── ALL WORK DAYS BY TYPE ──
+    html+='<div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.08em;text-transform:uppercase;margin:14px 0 7px">All Work Days</div>';
+    var byType={};
+    res.days.forEach(function(d){
+      if(d.dayH<=0)return;
+      if(!byType[d.sk])byType[d.sk]={count:0,h:0,pay:0,otCount:0,otH:0,phCount:0,phH:0};
+      byType[d.sk].count++;byType[d.sk].h+=d.dayH;byType[d.sk].pay+=d.dayPay;
+      if(d.isOT){byType[d.sk].otCount++;byType[d.sk].otH+=d.dayOtH;}
+      if(d.isPH){byType[d.sk].phCount++;byType[d.sk].phH+=d.dayH;}
     });
-    html+=`</div>`;
-  }
+    var typeKeys=Object.keys(byType);
+    html+='<div style="background:var(--s1);border-radius:12px;overflow:hidden;margin-bottom:12px">';
+    if(!typeKeys.length){
+      html+='<div style="padding:14px;text-align:center;color:var(--mu);font-size:13px">No work days in this period</div>';
+    }
+    typeKeys.forEach(function(sk){
+      var data=byType[sk];var sh=SH[sk];var col=SC[sk];
+      html+='<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--bd)">';
+      html+='<div style="font-size:19px">'+sh.e+'</div>';
+      html+='<div style="flex:1">';
+      html+='<div style="font-size:13px;font-weight:700;color:'+col+'">'+sh.n+'</div>';
+      html+='<div style="font-size:11px;color:var(--mu);margin-top:1px">'+data.count+' day'+(data.count>1?'s':'');
+      if(data.otCount)html+=' \u00b7 <span style="color:#FBBF24">'+data.otCount+' OT</span>';
+      if(data.phCount)html+=' \u00b7 <span style="color:#06B6D4">'+data.phCount+' PH</span>';
+      html+='</div></div>';
+      html+='<div style="text-align:right">';
+      html+='<div style="font-size:13px;font-weight:700;color:'+col+'">'+data.h.toFixed(1)+'h</div>';
+      if(data.otH>0)html+='<div style="font-size:10px;color:#FBBF24">'+data.otH.toFixed(1)+'h OT</div>';
+      if(data.phH>0)html+='<div style="font-size:10px;color:#06B6D4">'+data.phH.toFixed(1)+'h PH</div>';
+      html+='<div style="font-size:11px;color:var(--mu)">'+curr+data.pay.toFixed(3)+'</div>';
+      html+='</div></div>';
+    });
+    html+='</div>';
 
-  // All work days summary (collapsed by shift type, not per day)
-  html+=`<div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.08em;text-transform:uppercase;margin:14px 0 7px">All Work Days</div>`;
-  const byType={};
-  res.days.forEach(d=>{
-    if(d.dayH<=0)return;
-    if(!byType[d.sk])byType[d.sk]={count:0,h:0,pay:0,otCount:0,otH:0};
-    byType[d.sk].count++;byType[d.sk].h+=d.dayH;byType[d.sk].pay+=d.dayPay;
-    if(d.isOT){byType[d.sk].otCount++;byType[d.sk].otH+=d.dayOtH;}
-  });
-  html+=`<div style="background:var(--s1);border-radius:12px;overflow:hidden;margin-bottom:12px">`;
-  if(!Object.keys(byType).length){
-    html+=`<div style="padding:14px;text-align:center;color:var(--mu);font-size:13px">No work days in this period</div>`;
+    html+='<div style="text-align:center;padding:16px 0;font-size:11px;color:#3A3A55">&copy; '+new Date().getFullYear()+' Sayed Baqer Alseb3 Limited. All rights reserved.</div>';
+    r.innerHTML=html;
+  }catch(err){
+    var r2=document.getElementById('otResult');
+    if(r2)r2.innerHTML='<div style="padding:20px;text-align:center;color:var(--ck)">Error: '+err.message+'</div>';
   }
-  Object.entries(byType).forEach(([sk,data])=>{
-    const sh=SH[sk];const col=SC[sk];
-    html+=`<div style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid var(--bd)">
-      <div style="font-size:20px">${sh.e}</div>
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:700;color:${col}">${sh.n}</div>
-        <div style="font-size:11px;color:var(--mu);margin-top:1px">${data.count} day${data.count>1?'s':''}${data.otCount?` · <span style="color:#FBBF24">${data.otCount} OT</span>`:''}
-        </div>
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:14px;font-weight:700;color:${col}">${data.h.toFixed(1)}h</div>
-        ${data.otH>0?`<div style="font-size:11px;color:#FBBF24">${data.otH.toFixed(1)}h OT</div>`:''}
-        <div style="font-size:11px;color:var(--mu)">${curr}${data.pay.toFixed(3)}</div>
-      </div>
-    </div>`;
-  });
-  html+=`</div>`;
-
-  html+=`<div style="text-align:center;padding:16px 0;font-size:11px;color:#3A3A55">&copy; ${new Date().getFullYear()} Sayed Baqer Alseb3 Limited. All rights reserved.</div>`;
-  r.innerHTML=html;
 }
+
 
 // ── ICS EXPORT ────────────────────────────────────────────────────────────────
 document.getElementById('exportRow').onclick=exportICS;
