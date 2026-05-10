@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="ShiftCal"/>
+<meta name="theme-color" content="#0A0A12"/>
+<title>ShiftCal</title>
+
+<style>
+:root{
+  --bg:#0A0A12;--surface:#12121E;--surface2:#1A1A28;--border:#222232;
+  --text:#E8E8F8;--muted:#5A5A80;
+  --morning:#F59E0B;--morning-bg:#1E1400;
+  --lmorning:#FBBF24;--lmorning-bg:#241A00;
+  --afternoon:#10B981;--afternoon-bg:#001810;
+  --night:#818CF8;--night-bg:#0D0A2A;
+  --lnight:#A78BFA;--lnight-bg:#130A30;
+  --off:#374151;--off-bg:#0F0F14;
+  --sick:#EF4444;--sick-bg:#1A0606;
+  --leave:#06B6D4;--leave-bg:#001820;
+  --training:#A855F7;--training-bg:#180A28;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;background:#0A0A12;color:#E8E8F8;font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;}
+#app{display:flex;flex-direction:column;height:100%;}
+#statusbar{height:var(--safe-top);background:var(--bg);flex-shrink:0;}
+#header{padding:12px 16px 8px;flex-shrink:0;background:var(--bg);}
+#content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+#navbar{padding:8px 0 calc(8px + var(--safe-bottom));background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;display:flex;}
+.header-row{display:flex;align-items:center;justify-content:space-between;}
+.month-nav{display:flex;align-items:center;gap:12px;}
+.month-btn{width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.month-title{font-size:20px;font-weight:700;letter-spacing:-0.02em;}
+.icon-btn{width:36px;height:36px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.weekdays{display:grid;grid-template-columns:repeat(7,1fr);padding:4px 8px 0;gap:2px;}
+.wd{text-align:center;font-size:10px;font-weight:600;color:var(--muted);padding:4px 0;letter-spacing:0.06em;text-transform:uppercase;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);padding:4px 8px;gap:3px;}
+.cal-day{border-radius:10px;padding:4px 3px 6px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:56px;border:1.5px solid transparent;position:relative;}
+.cal-day:active{opacity:0.7;}
+.cal-day.today .day-num{background:var(--text);color:var(--bg);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:700;}
+.cal-day.other-month{opacity:0.3;}
+.cal-day.temp-period{outline:1px solid rgba(251,191,36,0.3);outline-offset:-2px;}
+.day-num{font-size:13px;font-weight:600;width:22px;height:22px;display:flex;align-items:center;justify-content:center;}
+.day-alarm{font-size:7.5px;color:var(--muted);font-family:'Courier New',Courier,monospace;line-height:1.4;}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px;cursor:pointer;background:none;border:none;color:var(--muted);font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;font-size:10px;font-weight:500;transition:color 0.15s;}
+.nav-btn.active{color:var(--night);}
+.nav-btn span:first-child{font-size:20px;}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:100;display:none;backdrop-filter:blur(4px);}
+.overlay.show{display:flex;align-items:flex-end;}
+.sheet{background:var(--surface);border-radius:24px 24px 0 0;width:100%;padding:0 0 calc(28px + var(--safe-bottom));max-height:93vh;overflow-y:auto;animation:up 0.28s ease;}
+@keyframes up{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.sheet-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 0;}
+.sheet-title{font-size:18px;font-weight:700;padding:16px 20px 10px;}
+.sheet-section{padding:0 20px 14px;}
+.shift-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.shift-opt{border-radius:14px;padding:12px 10px;cursor:pointer;border:2px solid transparent;display:flex;flex-direction:column;gap:3px;transition:all 0.15s;}
+.shift-opt.selected{border-color:currentColor;}
+.shift-opt .so-emoji{font-size:22px;}
+.shift-opt .so-name{font-size:13px;font-weight:700;}
+.shift-opt .so-time{font-size:10px;opacity:0.7;font-family:'Courier New',Courier,monospace;}
+.row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--border);}
+.row:last-child{border-bottom:none;}
+.row-label{font-size:14px;font-weight:500;}
+.row-sub{font-size:12px;color:var(--muted);margin-top:2px;}
+.toggle{width:44px;height:26px;border-radius:13px;background:var(--border);position:relative;cursor:pointer;transition:background 0.2s;flex-shrink:0;}
+.toggle.on{background:var(--night);}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:white;transition:transform 0.2s;}
+.toggle.on::after{transform:translateX(18px);}
+.stepper{display:flex;align-items:center;gap:10px;}
+.step-btn{width:30px;height:30px;border-radius:50%;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.step-val{font-size:15px;font-weight:700;min-width:28px;text-align:center;}
+.pattern-days{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0;}
+.pat-day{width:42px;height:52px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;border:2px solid var(--border);background:var(--surface2);transition:all 0.15s;}
+.pat-day .pd-num{font-size:11px;font-weight:700;color:var(--muted);}
+.pat-day .pd-emoji{font-size:16px;}
+.today-strip{margin:8px 16px;padding:14px 16px;border-radius:16px;display:flex;align-items:center;gap:14px;cursor:pointer;}
+.sync-banner{margin:0 16px 6px;padding:12px 16px;border-radius:12px;display:flex;align-items:center;gap:12px;cursor:pointer;border:1px solid var(--border);}
+.sync-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.settings-page{display:none;padding:16px;}
+.settings-page.show{display:block;}
+.settings-card{background:var(--surface);border-radius:16px;margin-bottom:14px;overflow:hidden;}
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border);}
+.settings-row:last-child{border-bottom:none;}
+.sr-label{font-size:14px;font-weight:500;}
+.sr-sub{font-size:12px;color:var(--muted);margin-top:2px;}
+.sec-title{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;margin:14px 0 7px;}
+input[type=date],select{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px;font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;font-size:14px;outline:none;width:100%;}
+input[type=time]{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 10px;font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;font-size:13px;outline:none;}
+input[type=text]{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 12px;font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;font-size:14px;outline:none;width:100%;}
+input[type=number]{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px;font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;font-size:14px;outline:none;width:60px;text-align:center;}
+.btn-primary{width:100%;padding:14px;border-radius:14px;border:none;background:linear-gradient(135deg,#6366F1,#10B981);color:white;font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;}
+.btn-secondary{width:100%;padding:11px;border-radius:14px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:6px;}
+.legend{display:flex;flex-wrap:wrap;gap:8px;padding:4px 16px 8px;}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);}
+.leg-dot{width:8px;height:8px;border-radius:50%;}
+.tp-item{background:var(--surface2);border-radius:12px;padding:12px 14px;margin-bottom:8px;border-left:3px solid var(--lmorning);}
+/* Alarm config card */
+.alarm-card{background:var(--surface2);border-radius:14px;padding:14px;margin-bottom:10px;}
+.alarm-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.alarm-card-title{font-size:14px;font-weight:700;}
+.alarm-count-btns{display:flex;gap:6px;}
+.acb{width:28px;height:28px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.acb.active{background:var(--night);border-color:var(--night);color:white;}
+.alarm-times-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.alarm-time-chip{display:flex;align-items:center;gap:6px;background:var(--surface);border-radius:8px;padding:6px 10px;border:1px solid var(--border);}
+.alarm-time-chip span{font-size:11px;color:var(--muted);font-family:'Courier New',Courier,monospace;}
+/* Shortcut output */
+.sc-output{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:14px;font-family:'Courier New',Courier,monospace;font-size:11px;color:#C0E0C0;line-height:1.9;white-space:pre-wrap;word-break:break-word;max-height:340px;overflow-y:auto;}
+.sc-step{background:var(--surface2);border-radius:12px;padding:14px;margin-bottom:8px;}
+.sc-step-num{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;}
+.sc-step-title{font-size:14px;font-weight:700;margin-bottom:4px;}
+.sc-step-body{font-size:13px;color:var(--muted);line-height:1.7;}
+.copy-btn{background:var(--night-bg);border:1px solid var(--night);border-radius:8px;color:var(--night);font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;font-size:13px;font-weight:600;cursor:pointer;padding:8px 16px;margin-top:8px;width:100%;}
+.copy-btn.copied{background:#001810;border-color:var(--afternoon);color:var(--afternoon);}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="statusbar"></div>
+  <div id="header">
+    <div class="header-row">
+      <div class="month-nav">
+        <button class="month-btn" onclick="changeMonth(-1)">&#8249;</button>
+        <div class="month-title" id="monthTitle"></div>
+        <button class="month-btn" onclick="changeMonth(1)">&#8250;</button>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="icon-btn" onclick="goToday()">&#9678;</button>
+        <button class="icon-btn" onclick="openPatternSheet()">&#9881;</button>
+      </div>
+    </div>
+  </div>
+  <div id="content">
+    <div id="todayStrip"></div>
+    <div id="syncBanner"></div>
+    <div class="legend" id="legend"></div>
+    <div class="weekdays"><div class="wd">Sun</div><div class="wd">Mon</div><div class="wd">Tue</div><div class="wd">Wed</div><div class="wd">Thu</div><div class="wd">Fri</div><div class="wd">Sat</div></div>
+    <div class="cal-grid" id="calGrid"></div>
+
+    <!-- SETTINGS -->
+    <div class="settings-page" id="settingsPage">
+
+      <div style="background:linear-gradient(135deg,var(--night-bg),var(--morning-bg));border:1px solid var(--night);border-radius:16px;padding:16px;margin-bottom:14px;">
+        <div style="font-size:15px;font-weight:700;color:var(--night);margin-bottom:6px;">&#128242; Install as iPhone App</div>
+        <div style="font-size:13px;color:#A0A0C0;line-height:1.9;">
+          1. Open in <strong>Safari</strong> &#8594; tap <strong>Share &#8593;</strong><br/>
+          2. Tap <strong>"Add to Home Screen"</strong> &#8594; <strong>Add</strong><br/>
+          3. Launches fullscreen, works offline &#10003;
+        </div>
+      </div>
+
+      <div class="sec-title">Cycle Start Date</div>
+      <div class="settings-card">
+        <div class="settings-row">
+          <div><div class="sr-label">Pattern Start</div><div class="sr-sub">Day 1 of your rotating cycle</div></div>
+          <input type="date" id="cycleStartInput" style="width:auto" onchange="saveCycleStart(this.value)"/>
+        </div>
+      </div>
+
+      <div class="sec-title">Alarms per Shift (up to 3, spaced 5 min)</div>
+      <div id="alarmConfigSection"></div>
+
+      <div class="sec-title">Calendar &amp; Alarm Sync</div>
+      <div class="settings-card">
+        <div class="settings-row" onclick="showShortcutSheet()" style="cursor:pointer">
+          <div><div class="sr-label">&#9889; Generate Shortcuts Script</div><div class="sr-sub">Auto sets alarms + calendar every night</div></div>
+          <div style="color:var(--muted)">&#8250;</div>
+        </div>
+        <div class="settings-row" onclick="exportICS()" style="cursor:pointer">
+          <div><div class="sr-label">&#128228; Export 12 Months (.ics)</div><div class="sr-sub">Import into iPhone Calendar with alarms</div></div>
+          <div style="color:var(--muted)">&#8250;</div>
+        </div>
+        <div class="settings-row" onclick="exportTodayICS()" style="cursor:pointer">
+          <div><div class="sr-label">&#8987; Export Today Only</div><div class="sr-sub">Quick add today's shift to Calendar</div></div>
+          <div style="color:var(--muted)">&#8250;</div>
+        </div>
+      </div>
+
+      <div class="sec-title">Temporary Period Patterns</div>
+      <div id="tempPeriodList"></div>
+      <button class="btn-secondary" onclick="openTempPeriodSheet(null)" style="margin-top:4px">+ Add Temporary Period Pattern</button>
+
+      <div class="sec-title">Reset</div>
+      <div class="settings-card">
+        <div class="settings-row" onclick="resetOverrides()" style="cursor:pointer">
+          <div><div class="sr-label" style="color:var(--sick)">Clear All Day Overrides</div></div><div>&#128465;</div>
+        </div>
+        <div class="settings-row" onclick="resetAll()" style="cursor:pointer">
+          <div><div class="sr-label" style="color:var(--sick)">Full Reset</div></div><div>&#9888;&#65039;</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="navbar">
+    <button class="nav-btn active" id="navCal" onclick="switchTab('cal')"><span>&#128197;</span><span>Calendar</span></button>
+    <button class="nav-btn" id="navSet" onclick="switchTab('set')"><span>&#9881;&#65039;</span><span>Settings</span></button>
+  </div>
+</div>
+
+<!-- DAY EDIT SHEET -->
+<div class="overlay" id="daySheet" onclick="closeDaySheet(event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="daySheetTitle">Edit Day</div>
+    <div class="sheet-section">
+      <div class="shift-grid" id="shiftGrid"></div>
+    </div>
+    <div class="sheet-section">
+      <div style="font-size:12px;font-weight:600;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px">Apply to date range</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">From</div><input type="date" id="rangeFrom"/></div>
+        <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">To</div><input type="date" id="rangeTo"/></div>
+      </div>
+      <div class="row">
+        <div><div class="row-label">Repeat this override</div><div class="row-sub">e.g. training every Tuesday x4</div></div>
+        <div class="toggle" id="repeatToggle" onclick="toggleRepeat()"></div>
+      </div>
+      <div id="repeatOptions" style="display:none;padding-top:8px">
+        <div class="row">
+          <div class="row-label">Every</div>
+          <div class="stepper">
+            <button class="step-btn" onclick="stepRepeat(-1)">&#8722;</button>
+            <div class="step-val" id="repeatEveryVal">1</div>
+            <button class="step-btn" onclick="stepRepeat(1)">+</button>
+            <select id="repeatUnit" style="width:auto;padding:6px 10px">
+              <option value="day">Days</option><option value="week" selected>Weeks</option><option value="month">Months</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="row-label">Number of times</div>
+          <div class="stepper">
+            <button class="step-btn" onclick="stepOccur(-1)">&#8722;</button>
+            <div class="step-val" id="repeatOccurVal">4</div>
+            <button class="step-btn" onclick="stepOccur(1)">+</button>
+          </div>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="applyOverride()">&#10003; Apply</button>
+      <button class="btn-secondary" onclick="clearOverride()">&#10005; Clear Override for Range</button>
+    </div>
+  </div>
+</div>
+
+<!-- PATTERN SHEET -->
+<div class="overlay" id="patternSheet" onclick="closePatternSheet(event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Rotating Base Pattern</div>
+    <div class="sheet-section">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:12px">Repeats forever from your cycle start date. Tap a day to change its shift.</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:14px;font-weight:600">Cycle length (days)</div>
+        <div class="stepper">
+          <button class="step-btn" onclick="stepCycle(-1)">&#8722;</button>
+          <div class="step-val" id="cycleLen">12</div>
+          <button class="step-btn" onclick="stepCycle(1)">+</button>
+        </div>
+      </div>
+      <div class="pattern-days" id="patternDays"></div>
+      <button class="btn-primary" onclick="savePattern()">Save Pattern</button>
+    </div>
+  </div>
+</div>
+
+<!-- TEMP PERIOD SHEET -->
+<div class="overlay" id="tempPeriodSheet" onclick="closeTempSheet(event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="tempSheetTitle">Temporary Period Pattern</div>
+    <div class="sheet-section">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:14px">Override the base pattern for a specific date range with its own repeating cycle.</div>
+      <div style="margin-bottom:12px"><div style="font-size:12px;color:var(--muted);margin-bottom:5px">Period Name</div><input type="text" id="tpName" placeholder="e.g. Summer Rota, Holiday Cover"/></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Start</div><input type="date" id="tpStart"/></div>
+        <div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">End</div><input type="date" id="tpEnd"/></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:14px;font-weight:600">Cycle length (days)</div>
+        <div class="stepper">
+          <button class="step-btn" onclick="stepTpCycle(-1)">&#8722;</button>
+          <div class="step-val" id="tpCycleLen">4</div>
+          <button class="step-btn" onclick="stepTpCycle(1)">+</button>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Tap each day to set shift type</div>
+      <div class="pattern-days" id="tpPatternDays"></div>
+      <button class="btn-primary" onclick="saveTempPeriod()">Save Period Pattern</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAT DAY PICKER -->
+<div class="overlay" id="patDaySheet" onclick="closePatDaySheet(event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="patDayTitle">Day 1</div>
+    <div class="sheet-section">
+      <div class="shift-grid" id="patDayGrid"></div>
+      <button class="btn-primary" onclick="closePatDaySheet()">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHORTCUT SHEET -->
+<div class="overlay" id="shortcutSheet" onclick="closeShortcutSheet(event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">&#9889; Shortcuts Auto-Sync Setup</div>
+    <div class="sheet-section">
+
+      <div style="background:var(--night-bg);border:1px solid var(--night);border-radius:12px;padding:14px;margin-bottom:14px;font-size:13px;color:#A0A0D0;line-height:1.7">
+        This script runs every night at <strong style="color:var(--text)">midnight</strong> via the Shortcuts app. It:<br/>
+        &#10003; Checks tomorrow's shift from your pattern<br/>
+        &#10003; Creates up to 3 alarms only if not already set<br/>
+        &#10003; Deletes yesterday's passed alarms automatically<br/>
+        &#10003; Adds tomorrow's shift to iPhone Calendar
+      </div>
+
+      <div class="sc-step">
+        <div class="sc-step-num">Step 01 — One time only</div>
+        <div class="sc-step-title">Create the Shortcut</div>
+        <div class="sc-step-body">Open <strong>Shortcuts app</strong> &#8594; tap <strong>+</strong> &#8594; name it <em>"ShiftCal Sync"</em>. Then add the actions below in order.</div>
+      </div>
+
+      <div class="sc-step">
+        <div class="sc-step-num">Step 02 — Actions to add</div>
+        <div class="sc-step-title">Copy this logic into Shortcuts</div>
+        <div class="sc-step-body" style="margin-bottom:10px">The script below shows the exact logic. Add one "If" block per shift type, with "Set Alarm" and "Add Calendar Event" inside each branch.</div>
+        <div class="sc-output" id="scOutput"></div>
+        <button class="copy-btn" id="copyBtn" onclick="copyScript()">&#128203; Copy Script to Clipboard</button>
+      </div>
+
+      <div class="sc-step">
+        <div class="sc-step-num">Step 03 — Automate it</div>
+        <div class="sc-step-title">Run at Midnight Every Night</div>
+        <div class="sc-step-body">
+          1. Go to <strong>Automation</strong> tab in Shortcuts<br/>
+          2. Tap <strong>+</strong> &#8594; <strong>Time of Day</strong><br/>
+          3. Set time to <strong>12:00 AM</strong>, repeat <strong>Daily</strong><br/>
+          4. Choose <strong>"ShiftCal Sync"</strong> shortcut<br/>
+          5. Turn off <strong>"Ask Before Running"</strong> &#8594; Done<br/><br/>
+          It now runs silently every night. &#10003;
+        </div>
+      </div>
+
+      <div style="background:var(--afternoon-bg);border:1px solid var(--afternoon);border-radius:12px;padding:14px;font-size:13px;color:var(--afternoon);line-height:1.7">
+        <strong>Smart alarm logic:</strong><br/>
+        &#8226; Checks existing alarms before creating new ones<br/>
+        &#8226; Uses alarm labels like "ShiftCal-Morning-1" to identify its own alarms<br/>
+        &#8226; Deletes previous day's ShiftCal alarms after they've passed<br/>
+        &#8226; Creates 1, 2 or 3 alarms per your setting, each 5 min apart
+      </div>
+
+      <button class="btn-primary" style="margin-top:12px" onclick="closeShortcutSheet()">Got it</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── SHIFTS ──────────────────────────────────────────────────────────────────
+const SHIFTS={
+  morning:  {name:'Morning',     emoji:'🌅',start:'06:00',end:'14:00',nextDay:false},
+  lmorning: {name:'Long Morning',emoji:'🌄',start:'06:00',end:'18:00',nextDay:false},
+  afternoon:{name:'Afternoon',   emoji:'☀️', start:'14:00',end:'22:00',nextDay:false},
+  night:    {name:'Night',       emoji:'🌙',start:'22:00',end:'06:00',nextDay:true},
+  lnight:   {name:'Long Night',  emoji:'🌑',start:'18:00',end:'06:00',nextDay:true},
+  off:      {name:'Off',         emoji:'😴',start:null,end:null,nextDay:false},
+  sick:     {name:'Sick Leave',  emoji:'🤒',start:null,end:null,nextDay:false},
+  leave:    {name:'Annual Leave',emoji:'🏖️', start:null,end:null,nextDay:false},
+  training: {name:'Training',    emoji:'📚',start:'09:00',end:'17:00',nextDay:false},
+};
+const SC={
+  morning:'#F59E0B',lmorning:'#FBBF24',afternoon:'#10B981',
+  night:'#818CF8',lnight:'#A78BFA',off:'#374151',
+  sick:'#EF4444',leave:'#06B6D4',training:'#A855F7'
+};
+const SB={
+  morning:'#1E1400',lmorning:'#241A00',afternoon:'#001810',
+  night:'#0D0A2A',lnight:'#130A30',off:'#0F0F14',
+  sick:'#1A0606',leave:'#001820',training:'#180A28'
+};
+
+// ── STATE ───────────────────────────────────────────────────────────────────
+// alarmConfig[shiftKey] = { count:1|2|3, base:'HH:MM' }
+// alarms are base, base-5, base-10 (earlier = more time before shift)
+const DEFAULT_ALARM_CONFIG = {
+  morning:  {count:1,base:'05:00'},
+  lmorning: {count:1,base:'05:00'},
+  afternoon:{count:1,base:'13:00'},
+  night:    {count:1,base:'21:00'},
+  lnight:   {count:1,base:'17:00'},
+  training: {count:1,base:'08:00'},
+};
+let state={
+  cycleStart:'2026-05-10',
+  pattern:['morning','morning','morning','night','night','night','off','off','afternoon','afternoon','afternoon','off'],
+  overrides:{},
+  tempPeriods:[],
+  alarmConfig: JSON.parse(JSON.stringify(DEFAULT_ALARM_CONFIG)),
+  lastSyncDate:null,
+};
+
+function loadState(){try{const s=localStorage.getItem('sc_v5');if(s){const p=JSON.parse(s);state={...state,...p};if(!state.alarmConfig)state.alarmConfig=JSON.parse(JSON.stringify(DEFAULT_ALARM_CONFIG));}}catch(e){}}
+function saveState(){try{localStorage.setItem('sc_v5',JSON.stringify(state));}catch(e){}}
+
+// ── HELPERS ─────────────────────────────────────────────────────────────────
+function dateKey(d){return d.toISOString().slice(0,10);}
+function parseDate(s){const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);}
+function addDays(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r;}
+
+function getShift(dk){
+  if(state.overrides[dk])return state.overrides[dk];
+  const d=parseDate(dk);
+  let tpMatch=null;
+  for(const tp of state.tempPeriods){
+    const ts=parseDate(tp.start),te=parseDate(tp.end);
+    if(d>=ts&&d<=te){const diff=Math.round((d-ts)/86400000);const len=tp.pattern.length;tpMatch=tp.pattern[((diff%len)+len)%len];}
+  }
+  if(tpMatch)return tpMatch;
+  const start=parseDate(state.cycleStart);
+  const diff=Math.round((d-start)/86400000);
+  const len=state.pattern.length;
+  return state.pattern[((diff%len)+len)%len];
+}
+
+function isInTempPeriod(dk){
+  const d=parseDate(dk);
+  return state.tempPeriods.some(tp=>d>=parseDate(tp.start)&&d<=parseDate(tp.end));
+}
+
+// Returns array of HH:MM strings for the shift's alarms
+function alarmsFor(sk){
+  const cfg=state.alarmConfig[sk];
+  if(!cfg||!SHIFTS[sk]||!SHIFTS[sk].start)return[];
+  const[bh,bm]=cfg.base.split(':').map(Number);
+  const times=[];
+  for(let i=0;i<cfg.count;i++){
+    let totalMin=bh*60+bm-(i*5);
+    if(totalMin<0)totalMin+=1440;
+    times.push(`${String(Math.floor(totalMin/60)).padStart(2,'0')}:${String(totalMin%60).padStart(2,'0')}`);
+  }
+  return times; // [earliest, ..., latest] — base is the last (closest to shift)
+}
+
+function to12h(t){if(!t)return'';const[h,m]=t.split(':').map(Number);return`${h%12||12}:${String(m).padStart(2,'0')} ${h>=12?'PM':'AM'}`;}
+function calcMins(alarm,shiftStart){const[ah,am]=alarm.split(':').map(Number);const[sh,sm]=shiftStart.split(':').map(Number);let d=(sh*60+sm)-(ah*60+am);if(d<0)d+=1440;return d;}
+
+// ── VIEW ─────────────────────────────────────────────────────────────────────
+let viewYear,viewMonth;
+function initView(){const n=new Date();viewYear=n.getFullYear();viewMonth=n.getMonth();}
+
+function renderCalendar(){
+  const MN=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('monthTitle').textContent=`${MN[viewMonth]} ${viewYear}`;
+  const today=new Date();today.setHours(0,0,0,0);
+  const first=new Date(viewYear,viewMonth,1),last=new Date(viewYear,viewMonth+1,0);
+  const pad=first.getDay();
+  const grid=document.getElementById('calGrid');grid.innerHTML='';
+  for(let i=0;i<pad;i++)grid.appendChild(makeDayCell(new Date(viewYear,viewMonth,1-(pad-i)),true));
+  for(let d=1;d<=last.getDate();d++){const date=new Date(viewYear,viewMonth,d);grid.appendChild(makeDayCell(date,false,date.getTime()===today.getTime()));}
+  const ep=(7-((pad+last.getDate())%7))%7;
+  for(let i=1;i<=ep;i++)grid.appendChild(makeDayCell(new Date(viewYear,viewMonth+1,i),true));
+  renderTodayStrip();renderSyncBanner();renderLegend();
+}
+
+function makeDayCell(date,otherMonth,isToday){
+  const dk=dateKey(date);
+  const sk=getShift(dk);
+  const shift=SHIFTS[sk]||SHIFTS.off;
+  const color=SC[sk]||'#374151';
+  const bg=SB[sk]||'#0F0F14';
+  const alarms=alarmsFor(sk);
+  const isOverride=!!state.overrides[dk];
+  const isTp=!isOverride&&isInTempPeriod(dk);
+  const cell=document.createElement('div');
+  cell.className='cal-day'+(otherMonth?' other-month':'')+(isToday?' today':'')+(isTp?' temp-period':'');
+  cell.style.background=bg;
+  if(isOverride)cell.style.borderColor=color;
+  // Show first alarm only on calendar (space constraint)
+  const alarmStr=alarms.length?`<div class="day-alarm">${to12h(alarms[alarms.length-1])}${alarms.length>1?` +${alarms.length-1}`:''}</div>`:'';
+  cell.innerHTML=`<div class="day-num" style="color:${color}">${date.getDate()}</div><div style="font-size:13px">${shift.emoji}</div>${alarmStr}${isOverride?`<div style="position:absolute;top:2px;right:3px;font-size:7px;color:${color}">&#9998;</div>`:''}${isTp?`<div style="position:absolute;bottom:2px;right:2px;font-size:6px;color:#FBBF24;">&#8853;</div>`:''}`;
+  cell.onclick=()=>openDaySheet(dk);
+  return cell;
+}
+
+function renderTodayStrip(){
+  const today=new Date();today.setHours(0,0,0,0);
+  const dk=dateKey(today);
+  const sk=getShift(dk);
+  const shift=SHIFTS[sk]||SHIFTS.off;
+  const color=SC[sk]||'#374151';
+  const bg=SB[sk]||'#0F0F14';
+  const alarms=alarmsFor(sk);
+  const tmrSk=getShift(dateKey(addDays(today,1)));
+  const tmrShift=SHIFTS[tmrSk]||SHIFTS.off;
+  const tmrColor=SC[tmrSk]||'#374151';
+  const tmrAlarms=alarmsFor(tmrSk);
+  const alarmStr=alarms.length?alarms.map(a=>`<span style="font-family:'Courier New',Courier,monospace;font-size:13px;font-weight:600;color:${color}">&#9200; ${to12h(a)}</span>`).join('<span style="color:var(--muted);font-size:11px"> · </span>'):'';
+  document.getElementById('todayStrip').innerHTML=
+    `<div class="today-strip" style="background:${bg};border:1px solid ${color}20" onclick="openDaySheet('${dk}')">
+      <div style="font-size:32px">${shift.emoji}</div>
+      <div style="flex:1">
+        <div style="font-size:18px;font-weight:800;color:${color}">${shift.name}</div>
+        <div style="font-size:12px;opacity:0.7;margin-top:2px">${shift.start?`${shift.start} &#8211; ${shift.end}`:'Rest day'}</div>
+        <div style="margin-top:4px">${alarmStr||'<span style="font-size:12px;color:var(--muted)">No alarm</span>'}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Tomorrow</div>
+        <div style="font-size:20px">${tmrShift.emoji}</div>
+        ${tmrAlarms.length?`<div style="font-size:10px;color:${tmrColor};font-family:'Courier New',Courier,monospace">${to12h(tmrAlarms[tmrAlarms.length-1])}</div>`:''}
+      </div>
+    </div>`;
+}
+
+function renderSyncBanner(){
+  const dk=dateKey(new Date());
+  const synced=state.lastSyncDate===dk;
+  const sk=getShift(dk);
+  const shift=SHIFTS[sk]||SHIFTS.off;
+  const alarms=alarmsFor(sk);
+  const dot=synced?'#10B981':'#EF4444';
+  document.getElementById('syncBanner').innerHTML=
+    `<div class="sync-banner" style="background:${synced?'#001810':'#1A0606'};border-color:${dot}30" onclick="quickSync()">
+      <div class="sync-dot" style="background:${dot};box-shadow:0 0 6px ${dot}"></div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600">${synced?'Synced today &#10003;':'Tap to sync today\'s alarms'}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${alarms.length?`${shift.name} &#8212; ${alarms.length} alarm${alarms.length>1?'s':''} set`:'Rest day &#8212; no alarm needed'}</div>
+      </div>
+      <div style="font-size:12px;color:var(--muted)">Sync &#8250;</div>
+    </div>`;
+}
+
+function renderLegend(){
+  const used=new Set();
+  document.querySelectorAll('#calGrid .cal-day:not(.other-month)').forEach(c=>{
+    const dn=c.querySelector('.day-num');
+    if(dn){const d=parseInt(dn.textContent);const dk=`${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;used.add(getShift(dk));}
+  });
+  document.getElementById('legend').innerHTML=[...used].map(k=>{const s=SHIFTS[k]||SHIFTS.off;const c=SC[k]||'#374151';return`<div class="leg-item"><div class="leg-dot" style="background:${c}"></div>${s.name}</div>`;}).join('');
+}
+
+function changeMonth(dir){viewMonth+=dir;if(viewMonth>11){viewMonth=0;viewYear++;}if(viewMonth<0){viewMonth=11;viewYear--;}renderCalendar();}
+function goToday(){const n=new Date();viewYear=n.getFullYear();viewMonth=n.getMonth();renderCalendar();}
+
+function switchTab(tab){
+  const ids=['calGrid','todayStrip','legend','syncBanner'];
+  const wd=document.querySelector('.weekdays');
+  const sp=document.getElementById('settingsPage');
+  const nC=document.getElementById('navCal'),nS=document.getElementById('navSet');
+  if(tab==='cal'){ids.forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='';});wd.style.display='';sp.classList.remove('show');nC.classList.add('active');nS.classList.remove('active');}
+  else{ids.forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});wd.style.display='none';sp.classList.add('show');nC.classList.remove('active');nS.classList.add('active');loadSettingsPage();renderTempPeriodList();}
+}
+
+// ── DAY EDIT ─────────────────────────────────────────────────────────────────
+let editingDate=null,repeatOn=false,repeatEvery=1,repeatOccur=4,selectedShift=null;
+function openDaySheet(dk){
+  editingDate=dk;
+  const d=parseDate(dk);
+  const DN=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  document.getElementById('daySheetTitle').textContent=`${DN[d.getDay()]}, ${d.toLocaleDateString('en-GB',{day:'numeric',month:'long'})}`;
+  document.getElementById('rangeFrom').value=dk;document.getElementById('rangeTo').value=dk;
+  selectedShift=getShift(dk);
+  renderShiftGrid('shiftGrid',selectedShift,k=>{selectedShift=k;renderShiftGrid('shiftGrid',k,k2=>{selectedShift=k2;});});
+  repeatOn=false;repeatEvery=1;repeatOccur=4;
+  document.getElementById('repeatToggle').classList.remove('on');
+  document.getElementById('repeatOptions').style.display='none';
+  document.getElementById('repeatEveryVal').textContent='1';
+  document.getElementById('repeatOccurVal').textContent='4';
+  document.getElementById('daySheet').classList.add('show');
+}
+function closeDaySheet(e){if(!e||e.target===document.getElementById('daySheet'))document.getElementById('daySheet').classList.remove('show');}
+function renderShiftGrid(gridId,currentKey,onSelect){
+  const grid=document.getElementById(gridId);grid.innerHTML='';
+  Object.entries(SHIFTS).forEach(([k,s])=>{
+    const color=SC[k]||'#374151';const bg=SB[k]||'#0F0F14';
+    const el=document.createElement('div');el.className='shift-opt'+(k===currentKey?' selected':'');
+    el.style.background=bg;el.style.color=color;
+    el.innerHTML=`<div class="so-emoji">${s.emoji}</div><div class="so-name">${s.name}</div><div class="so-time">${s.start?`${s.start}&#8211;${s.end}`:'No shift'}</div>`;
+    el.onclick=()=>onSelect(k);grid.appendChild(el);
+  });
+}
+function toggleRepeat(){repeatOn=!repeatOn;document.getElementById('repeatToggle').classList.toggle('on',repeatOn);document.getElementById('repeatOptions').style.display=repeatOn?'block':'none';}
+function stepRepeat(d){repeatEvery=Math.max(1,repeatEvery+d);document.getElementById('repeatEveryVal').textContent=repeatEvery;}
+function stepOccur(d){repeatOccur=Math.max(1,repeatOccur+d);document.getElementById('repeatOccurVal').textContent=repeatOccur;}
+function applyOverride(){
+  const from=parseDate(document.getElementById('rangeFrom').value);
+  const to=parseDate(document.getElementById('rangeTo').value);
+  const unit=document.getElementById('repeatUnit').value;
+  const applyRange=(f,t)=>{let c=new Date(f);while(c<=t){state.overrides[dateKey(c)]=selectedShift;c=addDays(c,1);}};
+  applyRange(from,to);
+  if(repeatOn){let anchor=new Date(from);const spanMs=to-from;for(let i=1;i<repeatOccur;i++){if(unit==='day')anchor=addDays(anchor,repeatEvery);else if(unit==='week')anchor=addDays(anchor,repeatEvery*7);else{anchor=new Date(anchor);anchor.setMonth(anchor.getMonth()+repeatEvery);}applyRange(anchor,new Date(anchor.getTime()+spanMs));}}
+  saveState();renderCalendar();document.getElementById('daySheet').classList.remove('show');
+}
+function clearOverride(){
+  const from=parseDate(document.getElementById('rangeFrom').value);
+  const to=parseDate(document.getElementById('rangeTo').value);
+  let c=new Date(from);while(c<=to){delete state.overrides[dateKey(c)];c=addDays(c,1);}
+  saveState();renderCalendar();document.getElementById('daySheet').classList.remove('show');
+}
+
+// ── PATTERN ──────────────────────────────────────────────────────────────────
+let editingPattern=[],editingPatternLen=12;
+function openPatternSheet(){editingPattern=[...state.pattern];editingPatternLen=editingPattern.length;document.getElementById('cycleLen').textContent=editingPatternLen;renderPatternDays();document.getElementById('patternSheet').classList.add('show');}
+function closePatternSheet(e){if(!e||e.target===document.getElementById('patternSheet'))document.getElementById('patternSheet').classList.remove('show');}
+function stepCycle(d){editingPatternLen=Math.max(1,Math.min(60,editingPatternLen+d));while(editingPattern.length<editingPatternLen)editingPattern.push('off');while(editingPattern.length>editingPatternLen)editingPattern.pop();document.getElementById('cycleLen').textContent=editingPatternLen;renderPatternDays();}
+function renderPatternDays(){
+  const c=document.getElementById('patternDays');c.innerHTML='';
+  editingPattern.forEach((k,i)=>{const color=SC[k]||'#374151';const bg=SB[k]||'#0F0F14';const s=SHIFTS[k]||SHIFTS.off;const el=document.createElement('div');el.className='pat-day';el.style.background=bg;el.style.borderColor=color;el.innerHTML=`<div class="pd-num" style="color:${color}">${i+1}</div><div class="pd-emoji">${s.emoji}</div>`;el.onclick=()=>openPatDaySheet(i,'base');c.appendChild(el);});
+}
+function savePattern(){state.pattern=[...editingPattern];saveState();renderCalendar();document.getElementById('patternSheet').classList.remove('show');}
+
+// ── TEMP PERIOD ───────────────────────────────────────────────────────────────
+let tpEditPattern=[],tpCycleLen=4,tpEditId=null;
+function openTempPeriodSheet(existingId){
+  tpEditId=existingId||null;const ex=existingId?state.tempPeriods.find(t=>t.id===existingId):null;
+  document.getElementById('tempSheetTitle').textContent=ex?'Edit Period Pattern':'New Period Pattern';
+  document.getElementById('tpName').value=ex?ex.name:'';
+  document.getElementById('tpStart').value=ex?ex.start:dateKey(new Date());
+  document.getElementById('tpEnd').value=ex?ex.end:'';
+  tpEditPattern=ex?[...ex.pattern]:['morning','morning','off','off'];
+  tpCycleLen=tpEditPattern.length;document.getElementById('tpCycleLen').textContent=tpCycleLen;
+  renderTpPatternDays();document.getElementById('tempPeriodSheet').classList.add('show');
+}
+function closeTempSheet(e){if(!e||e.target===document.getElementById('tempPeriodSheet'))document.getElementById('tempPeriodSheet').classList.remove('show');}
+function stepTpCycle(d){tpCycleLen=Math.max(1,Math.min(60,tpCycleLen+d));while(tpEditPattern.length<tpCycleLen)tpEditPattern.push('off');while(tpEditPattern.length>tpCycleLen)tpEditPattern.pop();document.getElementById('tpCycleLen').textContent=tpCycleLen;renderTpPatternDays();}
+function renderTpPatternDays(){
+  const c=document.getElementById('tpPatternDays');c.innerHTML='';
+  tpEditPattern.forEach((k,i)=>{const color=SC[k]||'#374151';const bg=SB[k]||'#0F0F14';const s=SHIFTS[k]||SHIFTS.off;const el=document.createElement('div');el.className='pat-day';el.style.background=bg;el.style.borderColor=color;el.innerHTML=`<div class="pd-num" style="color:${color}">${i+1}</div><div class="pd-emoji">${s.emoji}</div>`;el.onclick=()=>openPatDaySheet(i,'temp');c.appendChild(el);});
+}
+function saveTempPeriod(){
+  const name=document.getElementById('tpName').value.trim()||'Temp Period';
+  const start=document.getElementById('tpStart').value;const end=document.getElementById('tpEnd').value;
+  if(!start||!end){alert('Please set start and end dates.');return;}
+  if(tpEditId){const idx=state.tempPeriods.findIndex(t=>t.id===tpEditId);if(idx>-1)state.tempPeriods[idx]={id:tpEditId,name,start,end,pattern:[...tpEditPattern]};}
+  else{state.tempPeriods.push({id:Date.now().toString(),name,start,end,pattern:[...tpEditPattern]});}
+  saveState();renderCalendar();renderTempPeriodList();document.getElementById('tempPeriodSheet').classList.remove('show');
+}
+function renderTempPeriodList(){
+  const c=document.getElementById('tempPeriodList');if(!c)return;
+  if(!state.tempPeriods.length){c.innerHTML=`<div style="font-size:13px;color:var(--muted);padding:4px 0 8px">No temporary periods. Add one to override the base pattern for a date range.</div>`;return;}
+  c.innerHTML=state.tempPeriods.map(tp=>{const pat=tp.pattern.slice(0,8).map(k=>(SHIFTS[k]||SHIFTS.off).emoji).join('');const more=tp.pattern.length>8?` +${tp.pattern.length-8}`:'';return`<div class="tp-item"><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:14px;font-weight:700">${tp.name}</div><div style="display:flex;gap:6px"><button style="background:none;border:none;color:var(--muted);font-size:15px;cursor:pointer;padding:4px" onclick="openTempPeriodSheet('${tp.id}')">&#9998;</button><button style="background:none;border:none;color:var(--sick);font-size:15px;cursor:pointer;padding:4px" onclick="deleteTempPeriod('${tp.id}')">&#10005;</button></div></div><div style="font-size:12px;color:var(--muted);margin-top:3px">${tp.start} &#8594; ${tp.end} &nbsp;&#183;&nbsp; ${tp.pattern.length}-day cycle</div><div style="font-size:16px;margin-top:6px;letter-spacing:2px">${pat}${more}</div></div>`;}).join('');
+}
+function deleteTempPeriod(id){if(confirm('Delete this period pattern?')){state.tempPeriods=state.tempPeriods.filter(t=>t.id!==id);saveState();renderCalendar();renderTempPeriodList();}}
+
+// ── PAT DAY PICKER ────────────────────────────────────────────────────────────
+let editingPatIdx=null,editingPatCtx='base';
+function openPatDaySheet(idx,ctx){
+  editingPatIdx=idx;editingPatCtx=ctx||'base';
+  document.getElementById('patDayTitle').textContent=`Day ${idx+1}`;
+  const cur=ctx==='temp'?tpEditPattern[idx]:editingPattern[idx];
+  const onSel=k=>{if(editingPatCtx==='temp'){tpEditPattern[editingPatIdx]=k;renderTpPatternDays();}else{editingPattern[editingPatIdx]=k;renderPatternDays();}renderShiftGrid('patDayGrid',k,onSel);};
+  renderShiftGrid('patDayGrid',cur,onSel);
+  document.getElementById('patDaySheet').classList.add('show');
+}
+function closePatDaySheet(e){if(!e||e.target===document.getElementById('patDaySheet'))document.getElementById('patDaySheet').classList.remove('show');}
+
+// ── ALARM CONFIG ──────────────────────────────────────────────────────────────
+function renderAlarmConfig(){
+  const container=document.getElementById('alarmConfigSection');
+  if(!container)return;
+  const workShifts=Object.entries(SHIFTS).filter(([k,s])=>s.start);
+  container.innerHTML=workShifts.map(([sk,s])=>{
+    const cfg=state.alarmConfig[sk]||{count:1,base:'05:00'};
+    const color=SC[sk]||'#374151';const bg=SB[sk]||'#0F0F14';
+    const alarms=alarmsFor(sk);
+    return`<div class="alarm-card" style="border-left:3px solid ${color}">
+      <div class="alarm-card-header">
+        <div class="alarm-card-title" style="color:${color}">${s.emoji} ${s.name}</div>
+        <div class="alarm-count-btns">
+          ${[1,2,3].map(n=>`<button class="acb${cfg.count===n?' active':''}" onclick="setAlarmCount('${sk}',${n})">${n}</button>`).join('')}
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Base alarm time (1hr before shift = ${s.start})</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <input type="time" value="${cfg.base}" onchange="setAlarmBase('${sk}',this.value)" style="flex:1"/>
+        <div style="font-size:12px;color:var(--muted)">&#8592; set this</div>
+      </div>
+      <div class="alarm-times-row">
+        ${alarms.map((a,i)=>`<div class="alarm-time-chip" style="border-color:${color}30"><div style="font-size:8px;color:${color};font-weight:700">Alarm ${i+1}</div><span>${to12h(a)}</span></div>`).join('<div style="font-size:12px;color:var(--muted)">+5m</div>')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setAlarmCount(sk,n){
+  if(!state.alarmConfig[sk])state.alarmConfig[sk]={count:1,base:'05:00'};
+  state.alarmConfig[sk].count=n;
+  saveState();renderAlarmConfig();renderCalendar();
+}
+function setAlarmBase(sk,val){
+  if(!state.alarmConfig[sk])state.alarmConfig[sk]={count:1,base:val};
+  state.alarmConfig[sk].base=val;
+  saveState();renderAlarmConfig();renderCalendar();
+}
+
+// ── SETTINGS ──────────────────────────────────────────────────────────────────
+function loadSettingsPage(){
+  document.getElementById('cycleStartInput').value=state.cycleStart;
+  renderAlarmConfig();
+}
+function saveCycleStart(v){state.cycleStart=v;saveState();renderCalendar();}
+function resetOverrides(){if(confirm('Clear all manual day overrides?')){state.overrides={};saveState();renderCalendar();}}
+function resetAll(){if(confirm('Full reset?')){state={...state,overrides:{},tempPeriods:[],pattern:['morning','morning','morning','night','night','night','off','off','afternoon','afternoon','afternoon','off'],alarmConfig:JSON.parse(JSON.stringify(DEFAULT_ALARM_CONFIG)),lastSyncDate:null};saveState();renderCalendar();}}
+
+// ── QUICK SYNC ────────────────────────────────────────────────────────────────
+function quickSync(){
+  const today=new Date();today.setHours(0,0,0,0);
+  const dk=dateKey(today);const sk=getShift(dk);
+  const shift=SHIFTS[sk]||SHIFTS.off;const alarms=alarmsFor(sk);
+  const color=SC[sk]||'#374151';
+  let msg=`Today: ${shift.emoji} ${shift.name}`;
+  if(shift.start){msg+=`\nShift: ${shift.start} – ${shift.end}`;if(alarms.length){msg+=`\n\nAlarms to set in Clock app:`;alarms.forEach((a,i)=>{msg+=`\n  Alarm ${i+1}: ${to12h(a)} (${a})`;});}}
+  else{msg+='\nRest day — no alarm needed ✓';}
+  if(alarms.length){msg+='\n\nAlso export today to Calendar?';if(confirm(msg))exportTodayICS();else alert(`Set alarms in Clock app:\n${alarms.map((a,i)=>`Alarm ${i+1}: ${a}`).join('\n')}`);}
+  else alert(msg);
+  state.lastSyncDate=dk;saveState();renderSyncBanner();
+}
+
+// ── ICS EXPORT ────────────────────────────────────────────────────────────────
+function exportICS(){
+  const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//ShiftCal//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:My Shift Schedule'];
+  const today=new Date();today.setHours(0,0,0,0);const end=new Date(today);end.setMonth(end.getMonth()+12);
+  let cur=new Date(today);
+  while(cur<end){
+    const dk=dateKey(cur);const sk=getShift(dk);const s=SHIFTS[sk];
+    if(s&&s.start){
+      const alarms=alarmsFor(sk);
+      const[sy,sm,sd]=dk.split('-');
+      const dtS=`${sy}${sm}${sd}T${s.start.replace(':','')}00`;
+      let eDk=dk;if(s.nextDay){eDk=dateKey(addDays(cur,1));}
+      const[ey,em,ed]=eDk.split('-');const dtE=`${ey}${em}${ed}T${s.end.replace(':','')}00`;
+      lines.push('BEGIN:VEVENT',`UID:sc-${dk}-${sk}@shiftcal`,`DTSTART:${dtS}`,`DTEND:${dtE}`,`SUMMARY:${s.emoji} ${s.name}`,'STATUS:CONFIRMED');
+      alarms.forEach((a,i)=>lines.push('BEGIN:VALARM','ACTION:AUDIO',`TRIGGER:-PT${calcMins(a,s.start)}M`,`DESCRIPTION:Alarm ${i+1} for ${s.name}`,'END:VALARM'));
+      lines.push('END:VEVENT');
+    }
+    cur=addDays(cur,1);
+  }
+  lines.push('END:VCALENDAR');
+  const blob=new Blob([lines.join('\r\n')],{type:'text/calendar'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='ShiftCalendar.ics';a.click();
+}
+
+function exportTodayICS(){
+  const today=new Date();today.setHours(0,0,0,0);
+  const dk=dateKey(today);const sk=getShift(dk);const s=SHIFTS[sk];
+  if(!s||!s.start){alert('No shift today.');return;}
+  const alarms=alarmsFor(sk);
+  const[sy,sm,sd]=dk.split('-');
+  const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//ShiftCal//EN','CALSCALE:GREGORIAN','BEGIN:VEVENT',`UID:sc-today-${dk}@shiftcal`,`DTSTART:${sy}${sm}${sd}T${s.start.replace(':','')}00`,`DTEND:${sy}${sm}${sd}T${s.end.replace(':','')}00`,`SUMMARY:${s.emoji} ${s.name}`,'STATUS:CONFIRMED'];
+  alarms.forEach((a,i)=>lines.push('BEGIN:VALARM','ACTION:AUDIO',`TRIGGER:-PT${calcMins(a,s.start)}M`,`DESCRIPTION:Alarm ${i+1}`,'END:VALARM'));
+  lines.push('END:VEVENT','END:VCALENDAR');
+  const blob=new Blob([lines.join('\r\n')],{type:'text/calendar'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='TodayShift.ics';a.click();
+}
+
+// ── SHORTCUT SCRIPT GENERATOR ─────────────────────────────────────────────────
+function generateShortcutScript(){
+  const len=state.pattern.length;
+  const cs=state.cycleStart;
+  const workShifts=Object.keys(SHIFTS).filter(k=>SHIFTS[k].start);
+
+  // Build day-index groups per shift type from current pattern
+  const groups={};
+  state.pattern.forEach((k,i)=>{if(!groups[k])groups[k]=[];groups[k].push(i);});
+
+  let script=`# ShiftCal Sync — Auto-generated Shortcuts Script
+# Generated: ${new Date().toLocaleDateString()}
+# Cycle: ${len} days from ${cs}
+# ─────────────────────────────────────────────
+
+## ACTIONS IN SHORTCUTS APP:
+
+[1] Get Current Date → save as "Today"
+
+[2] Adjust Date: Today + 1 Day → save as "Tomorrow"
+
+[3] Calculate:
+    days_between("${cs}", Tomorrow) → save as "RawDiff"
+
+[4] Calculate:
+    RawDiff mod ${len} → save as "CycleDay"
+
+# ─── STEP 5: DELETE YESTERDAY'S ALARMS ───────
+[5] Get Alarms where Label contains "ShiftCal-"
+    For each alarm:
+      If alarm.IsEnabled = false AND alarm.Label contains "ShiftCal-":
+        Delete Alarm
+    # This cleans up alarms that have already fired
+
+# ─── STEP 6: CHECK & SET TOMORROW'S ALARMS ───
+`;
+
+  // Generate if/else blocks per shift type
+  const shiftEntries=Object.entries(groups).filter(([k])=>SHIFTS[k]&&SHIFTS[k].start);
+  shiftEntries.forEach(([sk,days],idx)=>{
+    const s=SHIFTS[sk];
+    const cfg=state.alarmConfig[sk]||{count:1,base:'05:00'};
+    const alarms=alarmsFor(sk);
+    const dayStr=days.join(', ');
+    const ifWord=idx===0?'If':'Otherwise If';
+
+    script+=`\n[${6+idx}] ${ifWord} CycleDay is one of: ${dayStr}:\n`;
+    script+=`    # Tomorrow is ${s.name} (${s.start}–${s.end})\n`;
+    script+=`    # Check if ShiftCal alarms already exist for this shift\n`;
+    script+=`    Get Alarms where Label = "ShiftCal-${sk.toUpperCase()}-1"\n`;
+    script+=`    If (Count of Alarms) is 0:\n`;
+    alarms.forEach((a,i)=>{
+      script+=`      Set Alarm: ${a} — Label: "ShiftCal-${sk.toUpperCase()}-${i+1}" — Enabled: ON\n`;
+    });
+    script+=`    End If\n`;
+    script+=`    Add Calendar Event:\n`;
+    script+=`      Title: "${s.emoji} ${s.name}"\n`;
+    script+=`      Date: Tomorrow\n`;
+    script+=`      Start: ${s.start} — End: ${s.end}${s.nextDay?' (+1 day)':''}\n`;
+    script+=`      Calendar: Work\n`;
+    script+=`      Alert: ${alarms[alarms.length-1]} (${calcMins(alarms[alarms.length-1],s.start)} min before)\n`;
+    script+=`\n`;
+  });
+
+  // Off days
+  const offDays=Object.entries(groups).filter(([k])=>!SHIFTS[k].start);
+  if(offDays.length){
+    const allOffDays=offDays.flatMap(([,days])=>days).sort((a,b)=>a-b);
+    script+=`[${6+shiftEntries.length}] Otherwise (CycleDay: ${allOffDays.join(', ')}):\n`;
+    script+=`    # Rest/Leave/Sick day — delete any pending ShiftCal alarms\n`;
+    script+=`    Get Alarms where Label contains "ShiftCal-"\n`;
+    script+=`    For each: Delete Alarm\n\n`;
+  }
+
+  script+=`# ─── STEP 7: SHOW NOTIFICATION ───────────────\n`;
+  script+=`[${7+shiftEntries.length}] Show Notification:\n`;
+  script+=`    Title: "ShiftCal ✓"\n`;
+  script+=`    Body: "Tomorrow: [shift name] — alarms set"\n\n`;
+
+  script+=`# ─── AUTOMATION SETUP ────────────────────────\n`;
+  script+=`Automation tab → + → Time of Day\n`;
+  script+=`  Time: 12:00 AM\n`;
+  script+=`  Repeat: Daily\n`;
+  script+=`  Shortcut: ShiftCal Sync\n`;
+  script+=`  Ask Before Running: OFF  ← important!\n`;
+
+  return script;
+}
+
+function showShortcutSheet(){
+  document.getElementById('scOutput').textContent=generateShortcutScript();
+  document.getElementById('shortcutSheet').classList.add('show');
+}
+function closeShortcutSheet(e){if(!e||e.target===document.getElementById('shortcutSheet'))document.getElementById('shortcutSheet').classList.remove('show');}
+
+function copyScript(){
+  const text=document.getElementById('scOutput').textContent;
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn=document.getElementById('copyBtn');
+    btn.textContent='✓ Copied!';btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent='📋 Copy Script to Clipboard';btn.classList.remove('copied');},2000);
+  }).catch(()=>{
+    // fallback
+    const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+    const btn=document.getElementById('copyBtn');btn.textContent='✓ Copied!';setTimeout(()=>{btn.textContent='📋 Copy Script to Clipboard';},2000);
+  });
+}
+
+// ── BOOT ──────────────────────────────────────────────────────────────────────
+loadState();
+initView();
+renderCalendar();
+</script>
+
+<div style="text-align:center;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));font-size:11px;color:#3A3A55;font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;letter-spacing:0.04em;">
+  &copy; <span id="cpYear"></span> Sayed Baqer Alseb3 Limited. All rights reserved.
+</div>
+<script>document.getElementById('cpYear').textContent=new Date().getFullYear();</script>
+</body>
+</html>
