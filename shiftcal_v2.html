@@ -398,12 +398,12 @@ var MN=['January','February','March','April','May','June','July','August','Septe
 
 // Default OT config  segs sum to actual shift hours; r>1.0 = premium
 var DEF_OT={
-  morning:  {normal:8, ot:[]},
-  lmorning: {normal:12,ot:[]},
-  afternoon:{normal:8, ot:[]},
-  night:    {normal:8, ot:[]},
-  lnight:   {normal:12,ot:[{h:3,r:1.5},{h:1,r:1.25}]},
-  training: {normal:8, ot:[]},
+  morning:  {patOT:[],                             offOT:[{h:8, r:1.5}]},
+  lmorning: {patOT:[{h:4,r:1.25}],                offOT:[{h:12,r:1.5}]},
+  afternoon:{patOT:[],                             offOT:[{h:8, r:1.5}]},
+  night:    {patOT:[],                             offOT:[{h:8, r:1.5}]},
+  lnight:   {patOT:[{h:1,r:1.25},{h:3,r:1.5}],   offOT:[{h:12,r:1.5}]},
+  training: {patOT:[],                             offOT:[{h:8, r:1.5}]},
 };
 var DEF_ALM={morning:{c:1,b:'05:00',g:5},lmorning:{c:1,b:'05:00',g:5},afternoon:{c:1,b:'13:00',g:5},night:{c:1,b:'21:00',g:5},lnight:{c:1,b:'17:00',g:5},training:{c:1,b:'08:00',g:5}};
 
@@ -416,11 +416,37 @@ var ST={
   almCfg:JSON.parse(JSON.stringify(DEF_ALM)),
   otRate:0.317,otCurr:'BHD',lastSync:null,
 };
-function loadST(){try{var s=localStorage.getItem('sc_v9');if(s){var p=JSON.parse(s);Object.keys(p).forEach(function(k){ST[k]=p[k];});// Always reset otCfg to defaults (prevent stale cached values)
-    ST.otCfg=JSON.parse(JSON.stringify(DEF_OT));
-    if(p.otCfgUser){Object.keys(p.otCfgUser).forEach(function(k){
-      if(p.otCfgUser[k]&&p.otCfgUser[k].ot) ST.otCfg[k]=p.otCfgUser[k];
-    });}if(!ST.almCfg)ST.almCfg=JSON.parse(JSON.stringify(DEF_ALM));if(!ST.ph)ST.ph={};if(!ST.manualOT)ST.manualOT={};if(!ST.otHours)ST.otHours={};if(!ST.nt)ST.nt={};if(!ST.hl)ST.hl={};}}catch(e){}}
+function loadST(){
+  try{
+    var s=localStorage.getItem('sc_v9');
+    if(s){
+      var p=JSON.parse(s);
+      // Load safe fields only
+      var safeFields=['cs','pat','ov','nt','hl','ph','manualOT','otHours','tp','almCfg','otRate','otCurr','lastSync','otCfgUser'];
+      safeFields.forEach(function(k){if(p[k]!==undefined)ST[k]=p[k];});
+      if(!ST.almCfg)ST.almCfg=JSON.parse(JSON.stringify(DEF_ALM));
+      if(!ST.ph)ST.ph={};
+      if(!ST.manualOT)ST.manualOT={};
+      if(!ST.otHours)ST.otHours={};
+      if(!ST.nt)ST.nt={};
+      if(!ST.hl)ST.hl={};
+      if(!ST.otCfgUser)ST.otCfgUser={};
+      if(!ST.tp)ST.tp=[];
+    }
+  }catch(e){}
+  // ALWAYS build otCfg fresh from DEF_OT + user overrides
+  // This prevents stale localStorage data from corrupting OT calculations
+  ST.otCfg={};
+  Object.keys(DEF_OT).forEach(function(sk){
+    var def=DEF_OT[sk];
+    var user=ST.otCfgUser&&ST.otCfgUser[sk];
+    ST.otCfg[sk]={
+      patOT: (user&&user.patOT)?user.patOT : JSON.parse(JSON.stringify(def.patOT)),
+      offOT: JSON.parse(JSON.stringify(def.offOT)),
+    };
+  });
+}
+
 function savST(){try{localStorage.setItem('sc_v9',JSON.stringify(ST));}catch(e){}}
 
 //  HELPERS 
@@ -512,39 +538,47 @@ function computeDay(ds){
   var sk=getShift(ds);
   var sh=SH[sk];
   if(!sh||!sh.s) return{segs:[],otH:0,otPay:0,normalH:0,phPay:0,isPH:false};
+
   var rate=parseFloat(ST.otRate)||0.317;
   var isPH=!!ST.ph[ds];
-  var otFlag=isOT(ds);
+  var offDuty=isOT(ds);
   var shiftH=sh.h;
   var customH=ST.otHours&&ST.otHours[ds]?parseFloat(ST.otHours[ds]):null;
   var dutyH=customH||shiftH;
+
+  // Always use ST.otCfg which is built fresh from DEF_OT+user overrides in loadST
+  var cfg=ST.otCfg[sk]||DEF_OT[sk]||{patOT:[],offOT:[{h:shiftH,r:1.5}]};
   var segs=[],otH=0,otPay=0,normalH=0,phPay=0;
+
   if(isPH){
+    // PUBLIC HOLIDAY: flat 1.5x all hours, no splitting
     segs=[{h:dutyH,r:1.5,label:'PH'}];
     phPay=dutyH*rate*1.5;
-  } else if(otFlag){
-    var userCfg=ST.otCfgUser&&ST.otCfgUser[sk];
-    var defCfg=DEF_OT[sk]||{ot:[]};
-    var otSegs=userCfg&&userCfg.ot&&userCfg.ot.length?userCfg.ot:(defCfg.ot&&defCfg.ot.length?defCfg.ot:null);
-    if(otSegs&&otSegs.length){
-      var segTotal=otSegs.reduce(function(a,s){return a+(parseFloat(s.h)||0);},0);
-      var scale=segTotal>0?dutyH/segTotal:1;
-      otSegs.forEach(function(s){
-        var h=parseFloat((parseFloat(s.h)*scale).toFixed(3));
-        var r=parseFloat(s.r)||1.5;
-        segs.push({h:h,r:r,label:'OT'});
-        otH+=h; otPay+=h*rate*r;
-      });
-    } else {
-      segs=[{h:dutyH,r:1.5,label:'OT'}];
-      otH=dutyH; otPay=dutyH*rate*1.5;
-    }
+
+  } else if(offDuty){
+    // OFF->DUTY: flat 1.5x all hours, no splitting
+    segs=[{h:dutyH,r:1.5,label:'Off-Duty'}];
+    otH=dutyH;
+    otPay=dutyH*rate*1.5;
+
   } else {
-    segs=[{h:shiftH,r:1.0,label:''}];
-    normalH=shiftH;
+    // NORMAL PATTERN DAY: use patOT segs from cfg
+    var patSegs=cfg.patOT||[];
+    var patOTH=patSegs.reduce(function(a,s){return a+(parseFloat(s.h)||0);},0);
+    var normH=Math.max(0,shiftH-patOTH);
+    if(normH>0){segs.push({h:normH,r:1.0,label:''});normalH+=normH;}
+    patSegs.forEach(function(s){
+      var h=parseFloat(s.h)||0;
+      var r=parseFloat(s.r)||1.5;
+      segs.push({h:h,r:r,label:'OT'});
+      otH+=h;otPay+=h*rate*r;
+    });
+    if(segs.length===0){segs=[{h:shiftH,r:1.0,label:''}];normalH=shiftH;}
   }
+
   return{segs:segs,otH:otH,otPay:otPay,normalH:normalH,phPay:phPay,isPH:isPH};
 }
+
 
 function calcOT(fromDs,toDs){
   var from=pd(fromDs),to=pd(toDs);
@@ -894,102 +928,117 @@ function renderOTCfg(){
   cont.innerHTML='';
   var ws=Object.keys(SH).filter(function(k){return SH[k]&&SH[k].s;});
   ws.forEach(function(sk){
-    var s=SH[sk];
-    var col=SC[sk]||'#818CF8';
-    var bg=SBG[sk]||'#111118';
-    var def=DEF_OT[sk]||{normal:s.h,ot:[]};
-    var userCfg=ST.otCfgUser&&ST.otCfgUser[sk];
-    var otSegs=(userCfg&&userCfg.ot)?userCfg.ot:(def.ot||[]);
-    var normalH=typeof def.normal==='number'?def.normal:s.h;
-    var otH=otSegs.reduce(function(a,x){return a+(parseFloat(x.h)||0);},0);
+    var s=SH[sk];var col=SC[sk]||'#818CF8';var bg=SBG[sk]||'#111118';
+    var cfg=ST.otCfg[sk]||DEF_OT[sk]||{patOT:[],offOT:[{h:s.h,r:1.5}]};
+    var curSegs=cfg.patOT||[];
+    var patOTH=curSegs.reduce(function(a,x){return a+(parseFloat(x.h)||0);},0);
+    var normalPortion=Math.max(0,s.h-patOTH);
 
     var wrap=document.createElement('div');
     wrap.style.cssText='background:'+bg+';border-left:3px solid '+col+';border-radius:12px;padding:12px;margin-bottom:9px';
 
-    var hdr=document.createElement('div');
-    hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:8px';
-    hdr.innerHTML='<div style="font-size:14px;font-weight:700;color:'+col+'">'+s.e+' '+s.n+'</div>'
-      +'<div style="font-size:11px;color:var(--mu)">'+s.h+'h shift &middot; normal pay, OT only when off-duty</div>';
-    wrap.appendChild(hdr);
+    // Title
+    var t=document.createElement('div');
+    t.style.cssText='font-size:14px;font-weight:700;color:'+col+';margin-bottom:8px';
+    t.textContent=s.e+' '+s.n+' ('+s.h+'h)';
+    wrap.appendChild(t);
 
-    // OT segs (only relevant for lnight — others show info only)
-    if(sk==='lnight'||otSegs.length>0){
-      var otlbl=document.createElement('div');
-      otlbl.style.cssText='font-size:12px;color:#06B6D4;margin-bottom:8px';
-      otlbl.textContent='When worked as OT (off-duty or PH), split hours:';
-      wrap.appendChild(otlbl);
-
-      var cntRow=document.createElement('div');
-      cntRow.style.cssText='display:flex;align-items:center;gap:6px;margin-bottom:8px';
-      cntRow.innerHTML='<div style="font-size:12px;color:var(--mu)">Segments:</div>';
-      [1,2,3].forEach(function(n){
-        var btn=document.createElement('button');
-        btn.textContent=n;
-        btn.style.cssText='width:28px;height:28px;border-radius:6px;border:1px solid '+(otSegs.length===n?col:'var(--bd)')+';background:'+(otSegs.length===n?col:'var(--s1)')+';color:'+(otSegs.length===n?'#000':'var(--tx)')+';font-size:12px;cursor:pointer';
-        (function(count,key){
-          btn.onclick=function(){
-            if(!ST.otCfgUser)ST.otCfgUser={};
-            if(!ST.otCfgUser[key])ST.otCfgUser[key]={ot:JSON.parse(JSON.stringify(DEF_OT[key]?DEF_OT[key].ot||[]:[])) };
-            var cur=ST.otCfgUser[key].ot;
-            while(cur.length<count)cur.push({h:1,r:1.5});
-            while(cur.length>count)cur.pop();
-            ST.otCfg[key]=ST.otCfgUser[key];
-            savST();renderOTCfg();
-          };
-        })(n,sk);
-        cntRow.appendChild(btn);
-      });
-      wrap.appendChild(cntRow);
-
-      otSegs.forEach(function(seg,i){
-        var row=document.createElement('div');
-        row.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:7px;padding:8px;background:rgba(6,182,212,.06);border-radius:8px';
-        var hInp=document.createElement('input');
-        hInp.type='number';hInp.min='0.5';hInp.max='24';hInp.step='0.5';hInp.value=seg.h;
-        hInp.style.cssText='background:var(--s2);border:1px solid var(--bd);color:var(--tx);border-radius:8px;padding:8px;font-family:inherit;font-size:14px;outline:none;width:100%';
-        (function(key,idx){
-          hInp.onchange=function(){
-            if(!ST.otCfgUser)ST.otCfgUser={};
-            if(!ST.otCfgUser[key])ST.otCfgUser[key]={ot:JSON.parse(JSON.stringify(DEF_OT[key]?DEF_OT[key].ot||[]:[])) };
-            if(ST.otCfgUser[key].ot[idx])ST.otCfgUser[key].ot[idx].h=parseFloat(this.value)||0;
-            ST.otCfg[key]=ST.otCfgUser[key];savST();
-          };
-        })(sk,i);
-        var rSel=document.createElement('select');
-        rSel.style.cssText='background:var(--s2);border:1px solid var(--bd);color:var(--tx);border-radius:8px;padding:8px;font-family:inherit;font-size:14px;outline:none;width:100%';
-        [{v:'1.25',t:'1.25x'},{v:'1.5',t:'1.5x'},{v:'2.0',t:'2.0x'}].forEach(function(opt){
-          var o=document.createElement('option');
-          o.value=opt.v;o.textContent=opt.t;
-          if(Math.abs(parseFloat(seg.r)-parseFloat(opt.v))<0.001)o.selected=true;
-          rSel.appendChild(o);
-        });
-        (function(key,idx){
-          rSel.onchange=function(){
-            if(!ST.otCfgUser)ST.otCfgUser={};
-            if(!ST.otCfgUser[key])ST.otCfgUser[key]={ot:JSON.parse(JSON.stringify(DEF_OT[key]?DEF_OT[key].ot||[]:[])) };
-            if(ST.otCfgUser[key].ot[idx])ST.otCfgUser[key].ot[idx].r=parseFloat(this.value);
-            ST.otCfg[key]=ST.otCfgUser[key];savST();
-          };
-        })(sk,i);
-        var d1=document.createElement('div');
-        d1.innerHTML='<div style="font-size:11px;color:#06B6D4;margin-bottom:3px">Hours</div>';
-        d1.appendChild(hInp);
-        var d2=document.createElement('div');
-        d2.innerHTML='<div style="font-size:11px;color:#06B6D4;margin-bottom:3px">Rate</div>';
-        d2.appendChild(rSel);
-        row.appendChild(d1);row.appendChild(d2);
-        wrap.appendChild(row);
-      });
+    // Normal schedule info
+    var nb=document.createElement('div');
+    nb.style.cssText='font-size:12px;padding:7px 10px;background:var(--s2);border-radius:7px;margin-bottom:6px';
+    if(curSegs.length>0){
+      var sd=curSegs.map(function(x){return parseFloat(x.h).toFixed(1)+'h×'+x.r;}).join(' + ');
+      nb.innerHTML='Normal day: <b style="color:var(--tx)">'+normalPortion.toFixed(1)+'h normal + '+sd+' OT</b>';
     } else {
-      var info=document.createElement('div');
-      info.style.cssText='font-size:12px;color:var(--mu);padding:6px 0';
-      info.textContent='Normal duty only. OT applies only when off-duty (all hours x1.5).';
-      wrap.appendChild(info);
+      nb.innerHTML='Normal day: <b style="color:var(--tx)">'+s.h+'h — no OT pay</b>';
     }
+    wrap.appendChild(nb);
+
+    // Off/PH info
+    var ob=document.createElement('div');
+    ob.style.cssText='font-size:12px;padding:7px 10px;background:var(--s2);border-radius:7px;margin-bottom:10px';
+    ob.innerHTML='Off-Duty / PH: <b style="color:#06B6D4">'+s.h+'h × 1.5 (flat)</b>';
+    wrap.appendChild(ob);
+
+    // Seg count label
+    var sl=document.createElement('div');
+    sl.style.cssText='font-size:11px;color:#FBBF24;font-weight:600;margin-bottom:7px';
+    sl.textContent='Normal-day OT segments (0 = no OT on normal days):';
+    wrap.appendChild(sl);
+
+    // Count buttons 0-3
+    var cr=document.createElement('div');
+    cr.style.cssText='display:flex;align-items:center;gap:6px;margin-bottom:8px';
+    [0,1,2,3].forEach(function(n){
+      var btn=document.createElement('button');
+      btn.textContent=n===0?'None':String(n);
+      btn.style.cssText='padding:4px 11px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;'
+        +'border:1px solid '+(curSegs.length===n?col:'var(--bd)')
+        +';background:'+(curSegs.length===n?col:'var(--s1)')
+        +';color:'+(curSegs.length===n?'#000':'var(--tx)');
+      (function(cnt,key){
+        btn.onclick=function(){
+          if(!ST.otCfgUser)ST.otCfgUser={};
+          var defSegs=JSON.parse(JSON.stringify(DEF_OT[key]?DEF_OT[key].patOT||[]:[]) );
+          if(!ST.otCfgUser[key])ST.otCfgUser[key]={patOT:defSegs};
+          var cur=ST.otCfgUser[key].patOT;
+          while(cur.length<cnt)cur.push({h:1,r:1.5});
+          while(cur.length>cnt)cur.pop();
+          // Rebuild ST.otCfg
+          ST.otCfg[key]={patOT:JSON.parse(JSON.stringify(cur)),offOT:JSON.parse(JSON.stringify(DEF_OT[key]?DEF_OT[key].offOT||[]:[{h:SH[key].h,r:1.5}]))};
+          savST();renderOTCfg();
+        };
+      })(n,sk);
+      cr.appendChild(btn);
+    });
+    wrap.appendChild(cr);
+
+    // Seg inputs
+    curSegs.forEach(function(seg,i){
+      var row=document.createElement('div');
+      row.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:7px;padding:8px;background:rgba(251,191,36,.07);border-radius:8px';
+      // Hours input
+      var hInp=document.createElement('input');
+      hInp.type='number';hInp.min='0.5';hInp.max='24';hInp.step='0.5';hInp.value=parseFloat(seg.h).toFixed(1);
+      hInp.style.cssText='background:var(--s2);border:1px solid var(--bd);color:var(--tx);border-radius:8px;padding:8px;font-family:inherit;font-size:14px;outline:none;width:100%';
+      (function(key,idx){
+        hInp.onchange=function(){
+          if(!ST.otCfgUser)ST.otCfgUser={};
+          if(!ST.otCfgUser[key])ST.otCfgUser[key]={patOT:JSON.parse(JSON.stringify(DEF_OT[key]?DEF_OT[key].patOT||[]:[])) };
+          if(ST.otCfgUser[key].patOT[idx])ST.otCfgUser[key].patOT[idx].h=parseFloat(this.value)||0;
+          ST.otCfg[key].patOT=JSON.parse(JSON.stringify(ST.otCfgUser[key].patOT));
+          savST();renderOTCfg();
+        };
+      })(sk,i);
+      // Rate select
+      var rSel=document.createElement('select');
+      rSel.style.cssText='background:var(--s2);border:1px solid var(--bd);color:var(--tx);border-radius:8px;padding:8px;font-family:inherit;font-size:14px;outline:none;width:100%';
+      [{v:'1.25',t:'1.25x (+25%)'},{v:'1.5',t:'1.5x (+50%)'},{v:'2.0',t:'2.0x (double)'}].forEach(function(opt){
+        var o=document.createElement('option');o.value=opt.v;o.textContent=opt.t;
+        if(Math.abs(parseFloat(seg.r)-parseFloat(opt.v))<0.001)o.selected=true;
+        rSel.appendChild(o);
+      });
+      (function(key,idx){
+        rSel.onchange=function(){
+          if(!ST.otCfgUser)ST.otCfgUser={};
+          if(!ST.otCfgUser[key])ST.otCfgUser[key]={patOT:JSON.parse(JSON.stringify(DEF_OT[key]?DEF_OT[key].patOT||[]:[])) };
+          if(ST.otCfgUser[key].patOT[idx])ST.otCfgUser[key].patOT[idx].r=parseFloat(this.value);
+          ST.otCfg[key].patOT=JSON.parse(JSON.stringify(ST.otCfgUser[key].patOT));
+          savST();renderOTCfg();
+        };
+      })(sk,i);
+      var d1=document.createElement('div');
+      d1.innerHTML='<div style="font-size:11px;color:#FBBF24;margin-bottom:3px">Seg '+(i+1)+' Hours</div>';
+      d1.appendChild(hInp);
+      var d2=document.createElement('div');
+      d2.innerHTML='<div style="font-size:11px;color:#FBBF24;margin-bottom:3px">Rate</div>';
+      d2.appendChild(rSel);
+      row.appendChild(d1);row.appendChild(d2);
+      wrap.appendChild(row);
+    });
     cont.appendChild(wrap);
   });
 }
-
 
 
 function renderAlmCfg(){
@@ -1011,7 +1060,7 @@ function setAlmC(sk,n){if(!ST.almCfg[sk])ST.almCfg[sk]={c:1,b:'05:00',g:5};ST.al
 function setAlmB(sk,v){if(!ST.almCfg[sk])ST.almCfg[sk]={c:1,b:v,g:5};ST.almCfg[sk].b=v;savST();renderAlmCfg();render();}
 function setAlmG(sk,v){if(!ST.almCfg[sk])ST.almCfg[sk]={c:1,b:'05:00',g:5};ST.almCfg[sk].g=Math.max(1,parseInt(v)||5);savST();renderAlmCfg();render();}
 function resetOv(){if(confirm('Clear all overrides, notes, highlights?')){ST.ov={};ST.hl={};ST.nt={};ST.ph={};ST.manualOT={};ST.otHours={};savST();render();}}
-function resetAll(){if(confirm('Full reset?')){ST={cs:'2026-05-10',pat:['morning','morning','morning','night','night','night','off','off','afternoon','afternoon','afternoon','off'],ov:{},nt:{},hl:{},ph:{},manualOT:{},otHours:{},otCfgUser:{},tp:[],otCfg:JSON.parse(JSON.stringify(DEF_OT)),almCfg:JSON.parse(JSON.stringify(DEF_ALM)),otRate:0.317,otCurr:'BHD',lastSync:null};savST();render();}}
+function resetAll(){if(confirm('Full reset?')){ST={cs:'2026-05-10',pat:['morning','morning','morning','night','night','night','off','off','afternoon','afternoon','afternoon','off'],ov:{},nt:{},hl:{},ph:{},manualOT:{},otHours:{},otCfgUser:{},tp:[],otCfg:JSON.parse(JSON.stringify(DEF_OT)),otCfgUser:{},almCfg:JSON.parse(JSON.stringify(DEF_ALM)),otRate:0.317,otCurr:'BHD',lastSync:null};savST();render();}}
 
 // ── OT PAGE ───────────────────────────────────────────────────────────────────
 function renderOTPage(){
@@ -1161,25 +1210,85 @@ document.getElementById('exportRow').onclick=function(){
 document.getElementById('syncRow').onclick=function(){genScript();document.getElementById('scOv').classList.add('op');};
 function genScript(){
   var len=ST.pat.length,cs=ST.cs;
-  var rt=document.getElementById('scTime');var da=document.getElementById('scDays');
-  var runTime=rt?rt.value:'00:00';var daysAhead=parseInt(da?da.value:'1');
-  var p2=runTime.split(':').map(Number);var rLabel=((p2[0]%12)||12)+':'+String(p2[1]).padStart(2,'0')+' '+(p2[0]>=12?'PM':'AM');
-  var groups={};ST.pat.forEach(function(k,i){if(!groups[k])groups[k]=[];groups[k].push(i);});
-  var we=Object.keys(groups).filter(function(k){return SH[k]&&SH[k].s;});
-  var sc='# ShiftCal Auto-Sync\n# '+new Date().toLocaleDateString()+' | '+len+'-day cycle from '+cs+'\n# Runs: '+rLabel+' | '+daysAhead+' day(s) ahead\n\n';
-  sc+='[1] Get Current Date\n[2] Adjust Date: +'+daysAhead+' Day'+(daysAhead>1?'s':'')+' -> "TargetDate"\n[3] Calculate: days_between("'+cs+'", TargetDate) mod '+len+' -> "CycleDay"\n\n';
-  sc+='[4] Get Alarms where Label starts "ShiftCal-"\n    For each where isEnabled=FALSE -> Delete\n\n';
-  we.forEach(function(sk,i){
-    var s=SH[sk];var alm=alms(sk);
-    sc+='['+(5+i)+'] '+(i===0?'If':'Otherwise If')+' CycleDay in ['+groups[sk].join(',')+']:\n';
-    sc+='    # '+s.n+' ('+s.s+'\u2013'+s.f+')\n';
-    sc+='    If no "ShiftCal-'+sk.toUpperCase()+'-1" alarm exists:\n';
-    alm.forEach(function(a,j){sc+='      Create Alarm: '+a+' | Label: "ShiftCal-'+sk.toUpperCase()+'-'+(j+1)+'" | ON\n';});
-    sc+='    Add Calendar Event: "'+s.e+' '+s.n+'" on TargetDate\n\n';
+  var rtEl=document.getElementById('scTime');
+  var daEl=document.getElementById('scDays');
+  var runTime=rtEl?rtEl.value:'00:00';
+  var daysAhead=parseInt(daEl?daEl.value:'1')||1;
+  var p2=runTime.split(':').map(Number);
+  var rLabel=((p2[0]%12)||12)+':'+String(p2[1]).padStart(2,'0')+' '+(p2[0]>=12?'PM':'AM');
+  var groups={};
+  ST.pat.forEach(function(k,i){if(!groups[k])groups[k]=[];groups[k].push(i);});
+  var workShifts=Object.keys(groups).filter(function(k){return SH[k]&&SH[k].s;});
+  var offShifts=Object.keys(groups).filter(function(k){return !SH[k]||!SH[k].s;});
+  var lines=[];
+  var L=function(s){lines.push(s);};
+  L("# ================================================");
+  L("# ShiftCal Auto-Sync Shortcut");
+  L("# Generated: "+new Date().toLocaleDateString());
+  L("# Pattern: "+len+"-day cycle from "+cs);
+  L("# Runs at: "+rLabel+" daily | "+daysAhead+" day(s) ahead");
+  L("# ================================================");
+  L("");
+  L("[1] Get Current Date");
+  L("[2] Adjust Date: +"+daysAhead+" Day"+(daysAhead>1?"s":"")+" -> store as 'TargetDate'");
+  L("[3] Calculate: days_between('"+cs+"', TargetDate) mod "+len+" -> store as 'CycleDay'");
+  L("");
+  L("[4] CLEAN UP PASSED ALARMS");
+  L("    Get Alarms where Label begins with 'ShiftCal-'");
+  L("    For each alarm where isEnabled = FALSE -> Delete it");
+  L("");
+  L("[5] SET ALARMS FOR TARGET DATE");
+  L("");
+  workShifts.forEach(function(sk,i){
+    var s=SH[sk];
+    var almTimes=alms(sk);
+    L("    "+(i===0?"If":"Otherwise If")+" CycleDay in ["+groups[sk].join(", ")+"]");
+    L("    # -> "+s.n+" ("+s.s+"-"+s.f+")");
+    L("    Check: Get Alarms where Label = 'ShiftCal-"+sk.toUpperCase()+"-1'");
+    L("    If count = 0 (not already set):");
+    if(almTimes.length===0){
+      L("      (no alarm configured for this shift)");
+    } else {
+      almTimes.forEach(function(t,j){
+        L("      Create Alarm: "+t+" ("+h12(t)+")");
+        L("        Label: 'ShiftCal-"+sk.toUpperCase()+"-"+(j+1)+"'");
+        L("        Enabled: ON");
+      });
+    }
+    L("    Add Calendar Event:");
+    L("      Title: '"+s.e+" "+s.n+"'");
+    L("      Date: TargetDate");
+    L("      Start: "+s.s+" | End: "+s.f+(s.nd?" (+1 day)":""));
+    L("");
   });
-  sc+='SETUP: Automation -> + -> Time of Day -> '+rLabel+' -> Daily -> Ask Before Running: OFF';
-  document.getElementById('scOut').textContent=sc;
+  if(offShifts.length){
+    var offDays=[];
+    offShifts.forEach(function(k){offDays=offDays.concat(groups[k]);});
+    offDays.sort(function(a,b){return a-b;});
+    L("    Otherwise (CycleDay in ["+offDays.join(", ")+"])");
+    L("    # -> Rest / Off / Leave day");
+    L("    Delete any ShiftCal- alarms (cleanup)");
+    L("");
+  }
+  L("[6] CONFIRM");
+  L("    Show Notification: 'ShiftCal OK - alarms set for TargetDate'");
+  L("");
+  L("# ================================================");
+  L("# AUTOMATION SETUP");
+  L("# ================================================");
+  L("1. Shortcuts app -> + -> name 'ShiftCal Sync'");
+  L("2. Add the actions above in order");
+  L("3. Automation tab -> + -> Time of Day");
+  L("4. Set time: "+rLabel+" | Repeat: Daily");
+  L("5. Select shortcut: ShiftCal Sync");
+  L("6. Turn OFF 'Ask Before Running' -> Done");
+  L("");
+  L("# Existing alarms with same label are skipped.");
+  L("# Fired alarms are deleted on next nightly run.");
+  document.getElementById('scOut').textContent=lines.join('\n');
 }
+
+
 function cpScript(){var t=document.getElementById('scOut').textContent;silentCopy(t);var b=document.getElementById('scCpBtn');b.textContent='\u2713 Copied!';setTimeout(function(){b.innerHTML='&#128203; Copy Script';},2000);}
 
 // ── BOOT ──────────────────────────────────────────────────────────────────────
