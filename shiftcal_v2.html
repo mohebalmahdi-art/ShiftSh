@@ -177,7 +177,7 @@ input[type=time],input[type=number]{width:auto;}
       <div class="sc2">
         <div class="sr2" id="syncRow" style="cursor:pointer"><div><div class="sl2">&#9889; Shortcuts Script</div><div class="ss2">Auto alarm + calendar nightly</div></div><span style="color:var(--mu)">&#8250;</span></div>
         <div class="sr2" id="exportRow" style="cursor:pointer"><div><div class="sl2">&#128197; Export to iPhone Calendar (.ics)</div><div class="ss2" id="exportRowSub">Tap to set alarms via Calendar</div></div><span style="color:var(--mu)">&#8250;</span></div>
-        <div class="sr2" id="deleteCalRow" style="cursor:pointer" onclick="doIcsDelete(12)"><div><div class="sl2" style="color:var(--sick)">&#128465; Remove from iPhone Calendar</div><div class="ss2">Downloads delete file — open in Calendar app to remove events</div></div><span style="color:var(--mu)">&#8250;</span></div>
+        <div class="sr2" id="deleteCalRow" style="cursor:pointer" onclick="showDeleteHelp()"><div><div class="sl2" style="color:var(--sick)">&#128465; Delete from iPhone Calendar</div><div class="ss2">Step-by-step guide to remove all imported events</div></div><span style="color:var(--mu)">&#8250;</span></div>
       </div>
       <div class="sct">Temporary Period Patterns</div>
       <div id="tpList"></div>
@@ -378,17 +378,19 @@ input[type=time],input[type=number]{width:auto;}
     <div style="background:var(--s2);border-radius:10px;padding:10px 13px;font-size:12px;color:var(--mu);line-height:1.7;margin-bottom:10px">
       &#128276; Each event has alarm reminders at your configured times (set in Settings &#8594; Alarms per Shift). Alarms ring even when iPhone is silenced — enable <strong style="color:var(--tx)">Calendar notifications</strong> in iPhone Settings &#8594; Notifications &#8594; Calendar.
     </div>
-    <div style="margin-top:4px;padding-top:10px;border-top:1px solid var(--bd)">
-      <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px">Remove from iPhone Calendar</div>
-      <div style="background:#1A0606;border:1px solid #EF444440;border-radius:11px;padding:11px;margin-bottom:8px;font-size:12px;color:#D0A0A0;line-height:1.7">
-        Downloads a delete file. Open it — iPhone Calendar will automatically remove all previously imported ShiftCal events. Use this to clean up before re-importing.
+    <div id="icsDeleteInst" style="margin-top:4px;padding-top:10px;border-top:1px solid var(--bd)">
+      <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px">Delete from iPhone Calendar</div>
+      <div style="background:#1A0606;border:1px solid #EF444440;border-radius:11px;padding:13px;margin-bottom:8px;font-size:13px;color:#D0C0C0;line-height:2">
+        <strong style="color:#E8E8F8">Steps to delete all ShiftCal events:</strong><br/>
+        1. Open the <strong style="color:#E8E8F8">Calendar</strong> app on iPhone<br/>
+        2. Tap <strong style="color:#E8E8F8">Calendars</strong> at the bottom<br/>
+        3. Tap <strong style="color:#E8E8F8">&#9432;</strong> next to <strong style="color:#E8E8F8">My Shift Schedule</strong><br/>
+        4. Scroll down &#8594; tap <strong style="color:#EF4444">Delete Calendar</strong><br/>
+        5. Come back here and re-export fresh
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <button onclick="doIcsDelete(2)" style="padding:11px 8px;border-radius:11px;border:1px solid #EF444460;background:#1A0606;color:#EF4444;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;text-align:center">&#128465; Remove 2 Months</button>
-        <button onclick="doIcsDelete(12)" style="padding:11px 8px;border-radius:11px;border:1px solid #EF444640;background:#1A0606;color:#EF4444;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;text-align:center">&#128465; Remove 12 Months</button>
-      </div>
+      <a href="calshow://" style="display:block;text-align:center;padding:12px;border-radius:11px;border:1px solid #EF444460;background:#1A0606;color:#EF4444;font-family:-apple-system,sans-serif;font-size:13px;font-weight:700;text-decoration:none;margin-bottom:4px">&#128197; Open Calendar App</a>
     </div>
-    <button class="btn bs" onclick="closeOv('icsOv')" style="margin-top:10px">Done</button>
+    <button class="btn bs" onclick="closeOv('icsOv')" style="margin-top:6px">Done</button>
   </div>
 </div>
 </div>
@@ -1265,10 +1267,11 @@ function doIcsExport(months){
       lines.push('DTSTART:'+dtS);
       lines.push('DTEND:'+dtE);
       lines.push('SUMMARY:'+s.n+' Shift');
-      lines.push('DESCRIPTION:'+(nt||s.n+' shift — '+h12(s.s)+' to '+h12(s.f)));
+      lines.push('DESCRIPTION:'+(nt||s.n+' shift ('+s.s+'-'+s.f+')'));
       lines.push('STATUS:CONFIRMED');
       lines.push('TRANSP:OPAQUE');
-      // VALARM: one entry per configured alarm time — ACTION:AUDIO fires sound on iPhone
+      // ACTION:DISPLAY is the correct type for iOS Calendar event reminders
+      // ACTION:AUDIO requires an ATTACH property and is unreliable without it
       alm.forEach(function(a,i){
         var ap=a.split(':').map(Number);
         var sp2=s.s.split(':').map(Number);
@@ -1276,8 +1279,8 @@ function doIcsExport(months){
         if(df<0)df+=1440;
         lines.push('BEGIN:VALARM');
         lines.push('TRIGGER:-PT'+df+'M');
-        lines.push('ACTION:AUDIO');
-        lines.push('DESCRIPTION:'+s.n+' shift — alarm '+(i+1));
+        lines.push('ACTION:DISPLAY');
+        lines.push('DESCRIPTION:'+s.n+' shift starting - alarm '+(i+1));
         lines.push('END:VALARM');
       });
       lines.push('END:VEVENT');
@@ -1287,57 +1290,31 @@ function doIcsExport(months){
     cur=aD(cur,1);
   }
   lines.push('END:VCALENDAR');
-  // Use Blob URL — more reliable than data: URI on iOS Safari/PWA
-  var blob=new Blob([lines.join('\r\n')],{type:'text/calendar;charset=utf-8'});
-  var url=URL.createObjectURL(blob);
-  var a=document.createElement('a');a.href=url;a.download='ShiftCal-'+months+'mo.ics';
+  // data: URI is required for iOS Safari/PWA — Blob URLs (blob:null/...) are not
+  // treated as file downloads on iOS WKWebView, causing truncated or missing imports.
+  var content=lines.join('\r\n');
+  var b64=btoa(unescape(encodeURIComponent(content)));
+  var a=document.createElement('a');
+  a.href='data:text/calendar;base64,'+b64;
+  a.download='ShiftCal-'+months+'mo.ics';
   document.body.appendChild(a);a.click();document.body.removeChild(a);
-  setTimeout(function(){URL.revokeObjectURL(url);},2000);
   ST.lastIcsExport=dk(today);savST();
-  // Build breakdown string
-  var breakdown=Object.keys(typeCounts).map(function(k){return SH[k].n+' \xd7'+typeCounts[k];}).join(', ');
+  var breakdown=Object.keys(typeCounts).map(function(k){return SH[k].n+' x'+typeCounts[k];}).join(', ');
   var statusEl=document.getElementById('icsStatus');
-  if(statusEl)statusEl.innerHTML='<span style="color:#10B981">&#10003; '+count+' shifts exported ('+months+' month'+(months>1?'s':'')+')<br><span style="font-size:11px;opacity:.75">'+breakdown+'</span></span>';
+  if(statusEl)statusEl.innerHTML='<span style="color:#10B981">&#10003; '+count+' shifts exported ('+months+' month'+(months>1?'s':'')+')<br><span style="font-size:11px;color:#10B981;opacity:.8">'+breakdown+'</span></span>';
   updateExportRowSub();
   updateCalBar();
   return count;
 }
 
-function doIcsDelete(months){
-  // Downloads a cancel ICS — opening it in iPhone Calendar removes all ShiftCal events
-  var lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//ShiftCal//EN','CALSCALE:GREGORIAN','METHOD:CANCEL'];
-  var today=new Date();today.setHours(0,0,0,0);
-  var end=new Date(today);end.setMonth(end.getMonth()+months);
-  var stamp=new Date().toISOString().replace(/[-:.]/g,'').slice(0,15)+'Z';
-  var count=0;
-  var cur=new Date(today);
-  while(cur<end){
-    var ds=dk(cur);var sk=getShift(ds);var s=SH[sk];
-    if(s&&s.s){
-      var p=ds.split('-');
-      var dtS=p[0]+p[1]+p[2]+'T'+s.s.replace(':','')+'00';
-      ['sc','sc2','sc3'].forEach(function(pfx){
-        lines.push('BEGIN:VEVENT');
-        lines.push('UID:'+pfx+'-'+ds+'-'+sk+'@shiftcal');
-        lines.push('DTSTAMP:'+stamp);
-        lines.push('DTSTART:'+dtS);
-        lines.push('STATUS:CANCELLED');
-        lines.push('SEQUENCE:2');
-        lines.push('END:VEVENT');
-      });
-      count++;
-    }
-    cur=aD(cur,1);
-  }
-  lines.push('END:VCALENDAR');
-  var blob=new Blob([lines.join('\r\n')],{type:'text/calendar;charset=utf-8'});
-  var url=URL.createObjectURL(blob);
-  var a=document.createElement('a');a.href=url;a.download='ShiftCal-Delete-'+months+'mo.ics';
-  document.body.appendChild(a);a.click();document.body.removeChild(a);
-  setTimeout(function(){URL.revokeObjectURL(url);},2000);
+function showDeleteHelp(){
+  // METHOD:CANCEL ICS files do not reliably remove self-imported events on iOS Calendar.
+  // The only reliable way is to delete the calendar manually from the Calendar app.
   var statusEl=document.getElementById('icsStatus');
-  if(statusEl)statusEl.innerHTML='<span style="color:#EF4444">&#128465; Delete file downloaded. Open it — iPhone Calendar will remove all ShiftCal events.</span>';
-  return count;
+  if(statusEl)statusEl.innerHTML='';
+  var delEl=document.getElementById('icsDeleteInst');
+  if(delEl)delEl.style.display='block';
+  document.getElementById('icsOv').classList.add('op');
 }
 
 function openIcsSheet(){
