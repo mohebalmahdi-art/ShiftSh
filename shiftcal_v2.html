@@ -123,6 +123,7 @@ input[type=time],input[type=number]{width:auto;}
   <div id="cnt">
     <div id="todayStrip"></div>
     <div id="syncBar"></div>
+    <div id="icsRefreshBanner" style="display:none"></div>
     <div class="leg" id="leg"></div>
     <div class="wdr"><div class="wd">Sun</div><div class="wd">Mon</div><div class="wd">Tue</div><div class="wd">Wed</div><div class="wd">Thu</div><div class="wd">Fri</div><div class="wd">Sat</div></div>
     <div class="cgr" id="cgr"></div>
@@ -175,7 +176,7 @@ input[type=time],input[type=number]{width:auto;}
       <div class="sct">Calendar &amp; Sync</div>
       <div class="sc2">
         <div class="sr2" id="syncRow" style="cursor:pointer"><div><div class="sl2">&#9889; Shortcuts Script</div><div class="ss2">Auto alarm + calendar nightly</div></div><span style="color:var(--mu)">&#8250;</span></div>
-        <div class="sr2" id="exportRow" style="cursor:pointer"><div><div class="sl2">&#128228; Export 12 months (.ics)</div><div class="ss2">Import into iPhone Calendar</div></div><span style="color:var(--mu)">&#8250;</span></div>
+        <div class="sr2" id="exportRow" style="cursor:pointer"><div><div class="sl2">&#128197; Export to iPhone Calendar (.ics)</div><div class="ss2" id="exportRowSub">Tap to set alarms via Calendar</div></div><span style="color:var(--mu)">&#8250;</span></div>
       </div>
       <div class="sct">Temporary Period Patterns</div>
       <div id="tpList"></div>
@@ -348,33 +349,79 @@ input[type=time],input[type=number]{width:auto;}
 </div>
 </div>
 
+<!-- ICS EXPORT SHEET -->
+
+<div class="ov" id="icsOv">
+<div class="sh">
+  <div class="shh"></div><div class="sht">&#128197; Export to iPhone Calendar</div>
+  <div class="shs">
+    <div style="background:var(--night-bg);border:1px solid var(--night);border-radius:11px;padding:12px;margin-bottom:10px;font-size:13px;color:#A0A0D0;line-height:1.7">
+      Exports your shift schedule as a <strong style="color:#E8E8F8">.ics calendar file</strong> with built-in alarm reminders at your configured times. Import once — re-export monthly.
+    </div>
+    <div id="icsStatus" style="background:var(--s2);border-radius:10px;padding:10px 13px;margin-bottom:10px;font-size:13px;color:var(--mu)">Checking last export…</div>
+    <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">Export range (from today)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <button onclick="doIcsExport(1)" style="padding:12px 8px;border-radius:11px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;text-align:center">&#128197; 1 Month<div style="font-size:10px;font-weight:400;color:var(--mu);margin-top:3px">~30 shifts</div></button>
+      <button onclick="doIcsExport(2)" style="padding:12px 8px;border-radius:11px;border:1px solid #818CF8;background:var(--night-bg);color:#818CF8;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;text-align:center">&#128197; 2 Months &#11088;<div style="font-size:10px;font-weight:400;color:#6060B0;margin-top:3px">Recommended</div></button>
+      <button onclick="doIcsExport(3)" style="padding:12px 8px;border-radius:11px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;text-align:center">&#128197; 3 Months<div style="font-size:10px;font-weight:400;color:var(--mu);margin-top:3px">~90 shifts</div></button>
+      <button onclick="doIcsExport(12)" style="padding:12px 8px;border-radius:11px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;text-align:center">&#128197; 12 Months<div style="font-size:10px;font-weight:400;color:var(--mu);margin-top:3px">Full year</div></button>
+    </div>
+    <div style="background:#001810;border:1px solid #10B98140;border-radius:11px;padding:12px;font-size:13px;color:#10B981;line-height:1.9;margin-bottom:8px">
+      <strong style="color:#E8E8F8">&#128241; Import on iPhone:</strong><br/>
+      1. Tap an export button above &#8594; file downloads<br/>
+      2. Tap the downloaded .ics file<br/>
+      3. iOS asks to open in <strong>Calendar</strong> &#8594; tap <strong>Add All</strong><br/>
+      4. Shifts appear with built-in alarm alerts<br/>
+      5. <strong>Re-export monthly</strong> when you open this app
+    </div>
+    <div style="background:var(--s2);border-radius:10px;padding:10px 13px;font-size:12px;color:var(--mu);line-height:1.7;margin-bottom:10px">
+      &#128276; Each calendar event includes alert reminders at your configured alarm times. Enable <strong style="color:var(--tx)">Calendar notifications</strong> in iPhone Settings &#8594; Notifications &#8594; Calendar.
+    </div>
+    <button class="btn bs" onclick="closeOv('icsOv')">Done</button>
+  </div>
+</div>
+</div>
+
 <!-- SHORTCUT SHEET -->
 
 <div class="ov" id="scOv">
 <div class="sh">
-  <div class="shh"></div><div class="sht">&#9889; Shortcuts Script</div>
+  <div class="shh"></div><div class="sht">&#9889; Auto-Alarm Setup</div>
   <div class="shs">
-    <div style="background:var(--night-bg);border:1px solid var(--night);border-radius:11px;padding:12px;margin-bottom:10px;font-size:13px;color:#A0A0D0;line-height:1.7">
-      Configure run time and days ahead, then copy the script into the Shortcuts app.
+    <!-- Mode tabs -->
+    <div style="display:flex;gap:3px;background:var(--s2);border-radius:10px;padding:3px;margin-bottom:10px">
+      <button id="scTabSteps" onclick="setScMode('steps')" style="flex:1;padding:8px 4px;border-radius:8px;border:none;background:#818CF8;color:#fff;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer">&#128203; Shortcuts Steps</button>
+      <button id="scTabCode" onclick="setScMode('scriptable')" style="flex:1;padding:8px 4px;border-radius:8px;border:none;background:none;color:var(--mu);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer">&#128187; Scriptable Code</button>
     </div>
-    <div style="background:var(--s2);border-radius:11px;padding:12px;margin-bottom:10px">
-      <div style="font-size:12px;color:var(--mu);margin-bottom:8px;font-weight:600">Settings</div>
+    <!-- Shared settings -->
+    <div style="background:var(--s2);border-radius:11px;padding:10px 12px;margin-bottom:10px">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div><div style="font-size:12px;color:var(--mu);margin-bottom:3px">Run time</div>
-          <select id="scTime" style="width:100%"><option value="00:00" selected>12:00 AM</option><option value="22:00">10:00 PM</option><option value="21:00">9:00 PM</option><option value="20:00">8:00 PM</option></select>
+        <div><div style="font-size:11px;color:var(--mu);margin-bottom:3px">Run time (nightly)</div>
+          <select id="scTime" style="width:100%"><option value="22:00" selected>10:00 PM</option><option value="21:00">9:00 PM</option><option value="20:00">8:00 PM</option><option value="23:00">11:00 PM</option><option value="00:00">12:00 AM</option></select>
         </div>
-        <div><div style="font-size:12px;color:var(--mu);margin-bottom:3px">Days ahead</div>
+        <div><div style="font-size:11px;color:var(--mu);margin-bottom:3px">Days ahead</div>
           <select id="scDays" style="width:100%"><option value="1" selected>Tomorrow</option><option value="2">2 days</option><option value="3">3 days</option></select>
         </div>
       </div>
-      <button onclick="genScript()" style="width:100%;margin-top:8px;padding:9px;border-radius:9px;border:none;background:linear-gradient(135deg,#6366F1,#10B981);color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">&#8635; Generate Script</button>
+      <button id="scGenBtn" onclick="runScGen()" style="width:100%;margin-top:8px;padding:9px;border-radius:9px;border:none;background:linear-gradient(135deg,#6366F1,#10B981);color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">&#8635; Generate</button>
     </div>
-    <div id="scOut" style="background:var(--bg);border:1px solid var(--bd);border-radius:11px;padding:12px;font-family:'Courier New',monospace;font-size:11px;color:#C0E0C0;line-height:1.9;white-space:pre-wrap;word-break:break-word;max-height:280px;overflow-y:auto;margin-bottom:8px"></div>
-    <button onclick="cpScript()" id="scCpBtn" style="width:100%;padding:10px;border-radius:11px;border:1px solid var(--night);background:var(--night-bg);color:#818CF8;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">&#128203; Copy Script</button>
-    <div style="background:#001810;border:1px solid #10B98140;border-radius:11px;padding:12px;font-size:13px;color:#10B981;line-height:1.7;margin-top:8px">
-      Automation &#8594; + &#8594; Time of Day &#8594; set time &#8594; Daily &#8594; select shortcut &#8594; Ask Before Running: OFF
+    <!-- Scriptable info panel (hidden by default) -->
+    <div id="scCodeInfo" style="display:none;background:#001014;border:1px solid #10B98140;border-radius:10px;padding:11px;margin-bottom:8px;font-size:12px;color:#10B981;line-height:1.8">
+      <strong style="color:#E8E8F8">&#128187; Scriptable (free App Store app):</strong><br/>
+      1. Install <strong>Scriptable</strong> from App Store<br/>
+      2. Tap [+] &#8594; paste the code below &#8594; name it <strong>ShiftCal Sync</strong><br/>
+      3. Shortcuts app &#8594; Automation &#8594; + &#8594; Time of Day<br/>
+      4. Set time &#8594; Daily &#8594; search <strong>Run Script (Scriptable)</strong><br/>
+      5. Select <strong>ShiftCal Sync</strong> &#8594; Turn OFF Ask Before Running &#8594; Done<br/>
+      <span style="color:#6090A0">Creates Calendar events + Reminders (alarm sound) each night</span>
     </div>
-    <button class="btn bs" onclick="closeOv('scOv')" style="margin-top:8px">Got it</button>
+    <!-- Steps info panel -->
+    <div id="scStepsInfo" style="background:var(--night-bg);border:1px solid var(--night);border-radius:10px;padding:11px;margin-bottom:8px;font-size:12px;color:#A0A0D0;line-height:1.7">
+      Step-by-step guide to build the shortcut manually in the <strong style="color:#E8E8F8">Shortcuts app</strong>. Each action uses exact names you can search in Shortcuts.
+    </div>
+    <div id="scOut" style="background:var(--bg);border:1px solid var(--bd);border-radius:11px;padding:12px;font-family:'Courier New',monospace;font-size:11px;color:#C0E0C0;line-height:1.8;white-space:pre-wrap;word-break:break-word;max-height:300px;overflow-y:auto;margin-bottom:8px"></div>
+    <button onclick="cpScript()" id="scCpBtn" style="width:100%;padding:10px;border-radius:11px;border:1px solid var(--night);background:var(--night-bg);color:#818CF8;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">&#128203; Copy</button>
+    <button class="btn bs" onclick="closeOv('scOv')" style="margin-top:8px">Done</button>
   </div>
 </div>
 </div>
@@ -422,7 +469,7 @@ function loadST(){
     if(s){
       var p=JSON.parse(s);
       // Load safe fields only
-      var safeFields=['cs','pat','ov','nt','hl','ph','manualOT','otHours','tp','almCfg','otRate','otCurr','lastSync','otCfgUser'];
+      var safeFields=['cs','pat','ov','nt','hl','ph','manualOT','otHours','tp','almCfg','otRate','otCurr','lastSync','otCfgUser','lastIcsExport'];
       safeFields.forEach(function(k){if(p[k]!==undefined)ST[k]=p[k];});
       if(!ST.almCfg)ST.almCfg=JSON.parse(JSON.stringify(DEF_ALM));
       if(!ST.ph)ST.ph={};
@@ -916,7 +963,7 @@ function loadSettings(){
   var sel=document.getElementById('otCurr');if(sel)sel.value=cur;
   var sym=document.getElementById('currSym');if(sym)sym.textContent=getCurrSym(cur);
   document.getElementById('yr').textContent=new Date().getFullYear();
-  renderOTCfg();renderAlmCfg();renderTpList();
+  renderOTCfg();renderAlmCfg();renderTpList();updateExportRowSub();
 }
 function savCS(v){ST.cs=v;savST();render();}
 function savRate(){ST.otRate=parseFloat(document.getElementById('otRate').value)||0.317;savST();}
@@ -1060,7 +1107,7 @@ function setAlmC(sk,n){if(!ST.almCfg[sk])ST.almCfg[sk]={c:1,b:'05:00',g:5};ST.al
 function setAlmB(sk,v){if(!ST.almCfg[sk])ST.almCfg[sk]={c:1,b:v,g:5};ST.almCfg[sk].b=v;savST();renderAlmCfg();render();}
 function setAlmG(sk,v){if(!ST.almCfg[sk])ST.almCfg[sk]={c:1,b:'05:00',g:5};ST.almCfg[sk].g=Math.max(1,parseInt(v)||5);savST();renderAlmCfg();render();}
 function resetOv(){if(confirm('Clear all overrides, notes, highlights?')){ST.ov={};ST.hl={};ST.nt={};ST.ph={};ST.manualOT={};ST.otHours={};savST();render();}}
-function resetAll(){if(confirm('Full reset?')){ST={cs:'2026-05-10',pat:['morning','morning','morning','night','night','night','off','off','afternoon','afternoon','afternoon','off'],ov:{},nt:{},hl:{},ph:{},manualOT:{},otHours:{},otCfgUser:{},tp:[],otCfg:JSON.parse(JSON.stringify(DEF_OT)),otCfgUser:{},almCfg:JSON.parse(JSON.stringify(DEF_ALM)),otRate:0.317,otCurr:'BHD',lastSync:null};savST();render();}}
+function resetAll(){if(confirm('Full reset?')){ST={cs:'2026-05-10',pat:['morning','morning','morning','night','night','night','off','off','afternoon','afternoon','afternoon','off'],ov:{},nt:{},hl:{},ph:{},manualOT:{},otHours:{},otCfgUser:{},tp:[],otCfg:JSON.parse(JSON.stringify(DEF_OT)),otCfgUser:{},almCfg:JSON.parse(JSON.stringify(DEF_ALM)),otRate:0.317,otCurr:'BHD',lastSync:null,lastIcsExport:null};savST();render();}}
 
 // ── OT PAGE ───────────────────────────────────────────────────────────────────
 function renderOTPage(){
@@ -1184,7 +1231,123 @@ function refreshOT(){
 }
 
 // ── ICS EXPORT ────────────────────────────────────────────────────────────────
-document.getElementById('exportRow').onclick=function(){
+function doIcsExport(months){
+  var lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//ShiftCal//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:My Shift Schedule','X-APPLE-CALENDAR-COLOR:#818CF8'];
+  var today=new Date();today.setHours(0,0,0,0);
+  var end=new Date(today);end.setMonth(end.getMonth()+months);
+  var cur=new Date(today);
+  var count=0;
+  var stamp=new Date().toISOString().replace(/[-:.]/g,'').slice(0,15)+'Z';
+  while(cur<end){
+    var ds=dk(cur);var sk=getShift(ds);var s=SH[sk];
+    if(s&&s.s){
+      var alm=alms(sk);var p=ds.split('-');
+      var dtS=p[0]+p[1]+p[2]+'T'+s.s.replace(':','')+'00';
+      var eDk=s.nd?dk(aD(cur,1)):ds;var ep2=eDk.split('-');
+      var dtE=ep2[0]+ep2[1]+ep2[2]+'T'+s.f.replace(':','')+'00';
+      var nt=ST.nt[ds];
+      lines.push('BEGIN:VEVENT');
+      lines.push('UID:sc2-'+ds+'-'+sk+'@shiftcal');
+      lines.push('DTSTAMP:'+stamp);
+      lines.push('DTSTART:'+dtS);
+      lines.push('DTEND:'+dtE);
+      lines.push('SUMMARY:'+s.e+' '+s.n);
+      lines.push('DESCRIPTION:'+(nt||s.n+' shift'));
+      lines.push('STATUS:CONFIRMED');
+      lines.push('TRANSP:OPAQUE');
+      alm.forEach(function(a,i){
+        var ap=a.split(':').map(Number);
+        var sp2=s.s.split(':').map(Number);
+        var df=(sp2[0]*60+sp2[1])-(ap[0]*60+ap[1]);
+        if(df<0)df+=1440;
+        lines.push('BEGIN:VALARM');
+        lines.push('TRIGGER:-PT'+df+'M');
+        lines.push('ACTION:DISPLAY');
+        lines.push('DESCRIPTION:'+s.e+' '+s.n+' — Wake up! ('+(i+1)+')');
+        lines.push('END:VALARM');
+      });
+      lines.push('END:VEVENT');
+      count++;
+    }
+    cur=aD(cur,1);
+  }
+  lines.push('END:VCALENDAR');
+  var b64=btoa(unescape(encodeURIComponent(lines.join('\r\n'))));
+  var a=document.createElement('a');
+  a.href='data:text/calendar;base64,'+b64;
+  a.download='ShiftCal-'+months+'mo.ics';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  ST.lastIcsExport=dk(today);savST();
+  var statusEl=document.getElementById('icsStatus');
+  if(statusEl)statusEl.innerHTML='<span style="color:#10B981">&#10003; Exported '+count+' shifts ('+months+' month'+(months>1?'s':'')+'). Open the downloaded file to import into Calendar.</span>';
+  updateExportRowSub();
+  renderSyncBar(dk(new Date()));
+  return count;
+}
+
+function openIcsSheet(){
+  var statusEl=document.getElementById('icsStatus');
+  if(statusEl){
+    if(ST.lastIcsExport){
+      var last=pd(ST.lastIcsExport);var today=new Date();today.setHours(0,0,0,0);
+      var ago=Math.round((today-last)/86400000);
+      statusEl.textContent='Last exported: '+ST.lastIcsExport+' ('+ago+' day'+(ago!==1?'s':'')+' ago)'+(ago>=25?' ⚠️ refresh recommended':'');
+    } else {
+      statusEl.textContent='Not yet exported — tap a button below to export.';
+    }
+  }
+  document.getElementById('icsOv').classList.add('op');
+}
+
+function updateExportRowSub(){
+  var sub=document.getElementById('exportRowSub');if(!sub)return;
+  if(ST.lastIcsExport){
+    var last=pd(ST.lastIcsExport);var today=new Date();today.setHours(0,0,0,0);
+    var ago=Math.round((today-last)/86400000);
+    sub.textContent='Last exported '+ago+' day'+(ago!==1?'s':'')+' ago'+(ago>=25?' — refresh!':'');
+    sub.style.color=ago>=25?'#FBBF24':'var(--mu)';
+  } else {
+    sub.textContent='Tap to export — enables Calendar alarms';
+    sub.style.color='var(--mu)';
+  }
+}
+
+function checkIcsRefresh(){
+  updateExportRowSub();
+  var b=document.getElementById('icsRefreshBanner');if(!b)return;
+  var needsUpdate=false;var ago=0;
+  if(!ST.lastIcsExport){needsUpdate=true;}
+  else{var last=pd(ST.lastIcsExport);var today=new Date();today.setHours(0,0,0,0);ago=Math.round((today-last)/86400000);if(ago>=25)needsUpdate=true;}
+  if(!needsUpdate){b.style.display='none';return;}
+  var isFirst=!ST.lastIcsExport;
+  var bg=isFirst?'#001820':'#1E1400';
+  var bd=isFirst?'rgba(6,182,212,.35)':'rgba(251,191,36,.35)';
+  var col=isFirst?'#06B6D4':'#FBBF24';
+  var msg=isFirst?'Tap to export calendar — enables shift alarm reminders':'Calendar '+ago+' days old — tap to auto-update (2 months)';
+  b.style.display='block';
+  b.innerHTML='<div id="icsAutoBanner" style="display:flex;align-items:center;gap:10px;padding:9px 14px;background:'+bg+';border-bottom:1px solid '+bd+';cursor:pointer">'
+    +'<div style="font-size:16px">&#128197;</div>'
+    +'<div style="flex:1"><div style="font-size:12px;font-weight:700;color:'+col+'">Update Calendar</div><div style="font-size:11px;color:'+col+';opacity:.75;margin-top:1px">'+msg+'</div></div>'
+    +'<button id="icsBannerBtn" style="background:'+col+';color:#000;border:none;border-radius:8px;padding:6px 12px;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer">Export</button></div>';
+  document.getElementById('icsBannerBtn').addEventListener('click',function(e){
+    e.stopPropagation();doIcsAutoQuick();
+  });
+  document.getElementById('icsAutoBanner').addEventListener('click',function(){doIcsAutoQuick();});
+}
+
+function doIcsAutoQuick(){
+  var b=document.getElementById('icsRefreshBanner');
+  if(b)b.innerHTML='<div style="padding:8px 14px;background:#001810;border-bottom:1px solid #10B98140;font-size:12px;color:#10B981;font-weight:600">&#9201; Generating calendar… open the downloaded file to import</div>';
+  setTimeout(function(){
+    var count=doIcsExport(2);
+    if(b)b.innerHTML='<div style="padding:8px 14px;background:#001810;border-bottom:1px solid #10B98140;font-size:12px;color:#10B981;font-weight:600">&#10003; Updated — '+count+' shifts exported. Open the .ics file in Calendar app.</div>';
+    setTimeout(function(){if(b)b.style.display='none';},5000);
+  },80);
+}
+
+document.getElementById('exportRow').onclick=function(){openIcsSheet();};
+// Legacy direct export (kept for safety)
+function _legacyExport(){
   var lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//ShiftCal//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:My Shift Schedule'];
   var today=new Date();today.setHours(0,0,0,0);var end=new Date(today);end.setMonth(end.getMonth()+12);
   var cur=new Date(today);
@@ -1207,84 +1370,321 @@ document.getElementById('exportRow').onclick=function(){
 };
 
 // ── SHORTCUTS ─────────────────────────────────────────────────────────────────
+var scMode='steps';
+function setScMode(m){
+  scMode=m;
+  var isCode=m==='scriptable';
+  document.getElementById('scTabSteps').style.background=isCode?'none':'#818CF8';
+  document.getElementById('scTabSteps').style.color=isCode?'var(--mu)':'#fff';
+  document.getElementById('scTabCode').style.background=isCode?'#10B981':'none';
+  document.getElementById('scTabCode').style.color=isCode?'#000':'var(--mu)';
+  document.getElementById('scCodeInfo').style.display=isCode?'block':'none';
+  document.getElementById('scStepsInfo').style.display=isCode?'none':'block';
+  document.getElementById('scOut').style.color=isCode?'#A0FFC0':'#C0E0C0';
+  runScGen();
+}
+function runScGen(){if(scMode==='scriptable')genScriptable();else genScript();}
 document.getElementById('syncRow').onclick=function(){genScript();document.getElementById('scOv').classList.add('op');};
+
+function genScriptable(){
+  var cs=ST.cs;
+  var pat=ST.pat;
+  var almCfg=ST.almCfg;
+  var daysAhead=parseInt(document.getElementById('scDays').value)||1;
+  var lines=[];
+  var L=function(s){lines.push(s);};
+  // Build pattern as JS array literal
+  var patJS=JSON.stringify(pat);
+  // Build alarms config literal
+  var almEntries=Object.keys(almCfg).filter(function(k){return SH[k]&&SH[k].s;}).map(function(k){
+    var a=almCfg[k];return '  '+k+':{c:'+a.c+',b:"'+a.b+'",g:'+(a.g||5)+'}';
+  });
+  var almJS='{\n'+almEntries.join(',\n')+'\n}';
+  // Shift definitions
+  var shEntries=Object.keys(SH).map(function(k){
+    var s=SH[k];
+    return '  '+k+':{n:"'+s.n+'",e:"'+s.e+'",'
+      +'s:'+(s.s?'"'+s.s+'"':'null')+','
+      +'f:'+(s.f?'"'+s.f+'"':'null')+','
+      +'nd:'+(s.nd?'true':'false')+'}';
+  });
+
+  L('// ╔══════════════════════════════════════════════════╗');
+  L('// ║  ShiftCal Auto-Sync — Scriptable Script        ║');
+  L('// ║  Free app: scriptable.app                      ║');
+  L('// ╚══════════════════════════════════════════════════╝');
+  L('// Generated: '+new Date().toLocaleDateString());
+  L('//');
+  L('// SETUP (5 minutes, one time):');
+  L('//   1. Install Scriptable from App Store (free)');
+  L('//   2. Open Scriptable → tap [+] → paste this whole script');
+  L('//   3. Tap the script name → rename to: ShiftCal Sync');
+  L('//   4. Shortcuts app → Automation tab → [+]');
+  L('//      → Personal Automation → Time of Day');
+  var scTimeLbl=(function(){var t=document.getElementById('scTime');return(t&&t.selectedIndex>=0)?t.options[t.selectedIndex].text:'10:00 PM';})();
+  L('//      → Set: '+scTimeLbl+' | Repeat: Daily');
+  L('//      → New Blank Automation → search "Scriptable"');
+  L('//      → Run Script → Script: ShiftCal Sync');
+  L('//      → Turn OFF "Ask Before Running" → Done ✓');
+  L('//');
+  L('// WHAT IT DOES NIGHTLY:');
+  L('//   • Calculates tomorrow\'s shift from your cycle');
+  L('//   • Adds a ShiftCal calendar event (shift start/end)');
+  L('//   • Adds a Reminder at your alarm time (sounds on iPhone)');
+  L('//   • Deletes previous ShiftCal events/reminders first');
+  L('//   • Shows a notification confirming what was done');
+  L('');
+  L('// ═══ CONFIG — auto-generated from ShiftCal app ══════════');
+  L('const CS         = "'+cs+'";  // cycle start date');
+  L('const PAT        = '+patJS+';');
+  L('const DAYS_AHEAD = '+daysAhead+';');
+  L('const CAL_NAME   = "ShiftCal";');
+  L('const REM_CAL    = "ShiftCal Alarms";  // Reminders list name');
+  L('');
+  L('const ALMS = '+almJS+';');
+  L('');
+  L('const SH = {');
+  shEntries.forEach(function(e){L(e+',');});
+  L('};');
+  L('');
+  L('// ═══ HELPERS ════════════════════════════════════════════');
+  L('function getShift(date) {');
+  L('  const start = new Date(CS);');
+  L('  const d     = new Date(date.getFullYear(), date.getMonth(), date.getDate());');
+  L('  const diff  = Math.round((d - start) / 86400000);');
+  L('  return PAT[((diff % PAT.length) + PAT.length) % PAT.length];');
+  L('}');
+  L('');
+  L('function almTimes(sk) {');
+  L('  const cfg = ALMS[sk]; if (!cfg) return [];');
+  L('  const [bh, bm] = cfg.b.split(":").map(Number);');
+  L('  return Array.from({length: cfg.c}, (_, i) => {');
+  L('    let t = bh*60 + bm - i*cfg.g; if (t < 0) t += 1440;');
+  L('    return `${String(Math.floor(t/60)).padStart(2,"0")}:${String(t%60).padStart(2,"0")}`;');
+  L('  });');
+  L('}');
+  L('');
+  L('function mkDate(base, timeStr, addDay = false) {');
+  L('  const [h, m] = timeStr.split(":").map(Number);');
+  L('  const d = new Date(base);');
+  L('  if (addDay) d.setDate(d.getDate() + 1);');
+  L('  d.setHours(h, m, 0, 0);');
+  L('  return d;');
+  L('}');
+  L('');
+  L('// ═══ MAIN ═══════════════════════════════════════════════');
+  L('const target = new Date();');
+  L('target.setDate(target.getDate() + DAYS_AHEAD);');
+  L('target.setHours(0, 0, 0, 0);');
+  L('');
+  L('const sk = getShift(target);');
+  L('const sh = SH[sk];');
+  L('');
+  L('// ── Calendar events ─────────────────────────────────────');
+  L('const cal       = await Calendar.findOrCreate(CAL_NAME);');
+  L('const dayStart  = new Date(target);');
+  L('const dayEnd    = new Date(target); dayEnd.setHours(23, 59, 59, 999);');
+  L('const oldEvents = await CalendarEvent.between(dayStart, dayEnd, [cal]);');
+  L('for (const ev of oldEvents) await ev.remove();');
+  L('');
+  L('// ── Reminders (alarm sound) ──────────────────────────────');
+  L('// Find or use first available reminders calendar');
+  L('const remCals   = await Calendar.forReminders();');
+  L('const remCal    = remCals.find(c => c.title === REM_CAL) || remCals[0];');
+  L('if (remCal) {');
+  L('  const oldRems = await Reminder.allDueBetween(dayStart, dayEnd, [remCal]);');
+  L('  if (oldRems) for (const r of oldRems) await r.remove();');
+  L('}');
+  L('');
+  L('let msg = `${target.toDateString()}: ${sh.e} ${sh.n}`;');
+  L('');
+  L('if (sh.s) {');
+  L('  // Create calendar event');
+  L('  const evStart = mkDate(target, sh.s);');
+  L('  const evEnd   = mkDate(target, sh.f, sh.nd);');
+  L('  const ev      = new CalendarEvent();');
+  L('  ev.calendar   = cal;');
+  L('  ev.title      = `${sh.e} ${sh.n}`;');
+  L('  ev.startDate  = evStart;');
+  L('  ev.endDate    = evEnd;');
+  L('  ev.notes      = "Created by ShiftCal";');
+  L('  await ev.save();');
+  L('  msg += `\\nShift: ${sh.s} – ${sh.f}`;');
+  L('');
+  L('  // Create reminder(s) for alarm sound');
+  L('  const times = almTimes(sk);');
+  L('  for (const t of times) {');
+  L('    const [h, m] = t.split(":").map(Number);');
+  L('    const almDate = new Date(target);');
+  L('    almDate.setHours(h, m, 0, 0);');
+  L('    const rem     = new Reminder();');
+  L('    if (remCal) rem.calendar = remCal;');
+  L('    rem.title     = `${sh.e} ${sh.n} — Wake up!`;');
+  L('    rem.dueDate   = almDate;');
+  L('    rem.dueDateIncludesTime = true;');
+  L('    await rem.save();');
+  L('  }');
+  L('  if (times.length) msg += `\\nAlarm(s): ${times.join(", ")}`;');
+  L('} else {');
+  L('  msg += "\\nRest day — no event or alarm";');
+  L('}');
+  L('');
+  L('// Confirm notification');
+  L('const notif = new Notification();');
+  L('notif.title = "ShiftCal ✓";');
+  L('notif.body  = msg;');
+  L('notif.schedule();');
+  L('');
+  L('Script.complete();');
+  document.getElementById('scOut').textContent=lines.join('\n');
+}
 function genScript(){
   var len=ST.pat.length,cs=ST.cs;
   var rtEl=document.getElementById('scTime');
   var daEl=document.getElementById('scDays');
-  var runTime=rtEl?rtEl.value:'00:00';
+  var runTime=rtEl?rtEl.value:'22:00';
   var daysAhead=parseInt(daEl?daEl.value:'1')||1;
   var p2=runTime.split(':').map(Number);
   var rLabel=((p2[0]%12)||12)+':'+String(p2[1]).padStart(2,'0')+' '+(p2[0]>=12?'PM':'AM');
+  var dayLabel=daysAhead===1?'tomorrow':daysAhead+' days ahead';
   var groups={};
   ST.pat.forEach(function(k,i){if(!groups[k])groups[k]=[];groups[k].push(i);});
   var workShifts=Object.keys(groups).filter(function(k){return SH[k]&&SH[k].s;});
   var offShifts=Object.keys(groups).filter(function(k){return !SH[k]||!SH[k].s;});
+  var offDaysList=[];offShifts.forEach(function(k){offDaysList=offDaysList.concat(groups[k]);});offDaysList.sort(function(a,b){return a-b;});
   var lines=[];
   var L=function(s){lines.push(s);};
-  L("# ================================================");
-  L("# ShiftCal Auto-Sync Shortcut");
-  L("# Generated: "+new Date().toLocaleDateString());
-  L("# Pattern: "+len+"-day cycle from "+cs);
-  L("# Runs at: "+rLabel+" daily | "+daysAhead+" day(s) ahead");
-  L("# ================================================");
+
+  L("╔═══════════════════════════════════════════════════╗");
+  L("║    ShiftCal Auto-Alarm — iOS Shortcuts Setup     ║");
+  L("╚═══════════════════════════════════════════════════╝");
+  L("Generated: "+new Date().toLocaleDateString());
+  L("Pattern  : "+len+"-day cycle, starts "+cs);
+  L("Schedule : runs "+rLabel+" nightly → sets alarms for "+dayLabel);
   L("");
-  L("[1] Get Current Date");
-  L("[2] Adjust Date: +"+daysAhead+" Day"+(daysAhead>1?"s":"")+" -> store as 'TargetDate'");
-  L("[3] Calculate: days_between('"+cs+"', TargetDate) mod "+len+" -> store as 'CycleDay'");
+  L("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  L("STEP 1  Create the shortcut");
+  L("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  L("Open Shortcuts app → tap [+] → name it  ShiftCal Sync");
+  L("Add the following actions IN ORDER:");
   L("");
-  L("[4] CLEAN UP PASSED ALARMS");
-  L("    Get Alarms where Label begins with 'ShiftCal-'");
-  L("    For each alarm where isEnabled = FALSE -> Delete it");
+  L("┌─ ACTION 1: Store the cycle start date ─────────────");
+  L("│  Action : Text");
+  L("│  Value  : "+cs);
+  L("│  → Set Variable  name = CycleStart");
+  L("└────────────────────────────────────────────────────");
   L("");
-  L("[5] SET ALARMS FOR TARGET DATE");
+  L("┌─ ACTION 2: Parse it as a real date ────────────────");
+  L("│  Action : Date");
+  L("│  Input  : Variable [CycleStart]");
+  L("│  → Set Variable  name = StartDate");
+  L("└────────────────────────────────────────────────────");
   L("");
-  workShifts.forEach(function(sk,i){
-    var s=SH[sk];
-    var almTimes=alms(sk);
-    L("    "+(i===0?"If":"Otherwise If")+" CycleDay in ["+groups[sk].join(", ")+"]");
-    L("    # -> "+s.n+" ("+s.s+"-"+s.f+")");
-    L("    Check: Get Alarms where Label = 'ShiftCal-"+sk.toUpperCase()+"-1'");
-    L("    If count = 0 (not already set):");
-    if(almTimes.length===0){
-      L("      (no alarm configured for this shift)");
+  L("┌─ ACTION 3: Get target date ("+dayLabel+") ──────────");
+  L("│  Action : Get Current Date");
+  L("│  Action : Adjust Date");
+  L("│           Add "+daysAhead+" Day"+(daysAhead>1?"s":"")+"");
+  L("│  → Set Variable  name = TargetDate");
+  L("└────────────────────────────────────────────────────");
+  L("");
+  L("┌─ ACTION 4: Calculate cycle position ───────────────");
+  L("│  Action : Number        input = [TargetDate]");
+  L("│           ← this gives Unix timestamp in seconds");
+  L("│  → Set Variable  name = TargetSec");
+  L("│");
+  L("│  Action : Number        input = [StartDate]");
+  L("│  → Set Variable  name = StartSec");
+  L("│");
+  L("│  Action : Calculate     [TargetSec] − [StartSec]");
+  L("│  → Set Variable  name = DiffSec");
+  L("│");
+  L("│  Action : Calculate     [DiffSec] ÷ 86400");
+  L("│  Action : Round         Floor");
+  L("│  → Set Variable  name = TotalDays");
+  L("│");
+  L("│  Action : Calculate     [TotalDays] mod "+len);
+  L("│  → Set Variable  name = CycleDay");
+  L("└────────────────────────────────────────────────────");
+  L("");
+  L("┌─ ACTION 5: Delete ALL previous ShiftCal alarms ────");
+  L("│  Action : Get Alarms");
+  L("│  Action : Filter         Label  begins with  ShiftCal");
+  L("│  Action : Repeat with each item in [Filtered Alarms]");
+  L("│    Action : Delete Alarm   [Repeat Item]");
+  L("│  [End Repeat]");
+  L("└────────────────────────────────────────────────────");
+  L("");
+  L("┌─ ACTION 6: Create alarm(s) for the shift ──────────");
+  var first=true;
+  workShifts.forEach(function(sk){
+    var s=SH[sk];var almTimes=alms(sk);
+    L("│  "+(first?"If     ":"Else If")+"  CycleDay  is  in  ["+groups[sk].join(", ")+"]");
+    first=false;
+    L("│  │  # "+s.e+" "+s.n+" ("+s.s+" – "+s.f+")");
+    if(!almTimes.length){
+      L("│  │  # no alarm configured — skip alarm creation");
+      L("│  │  Action : Show Notification  '"+s.e+" "+s.n+" — no alarm'");
     } else {
       almTimes.forEach(function(t,j){
-        L("      Create Alarm: "+t+" ("+h12(t)+")");
-        L("        Label: 'ShiftCal-"+sk.toUpperCase()+"-"+(j+1)+"'");
-        L("        Enabled: ON");
+        L("│  │  Action : Create Alarm");
+        L("│  │           Time  : "+t+"  ("+h12(t)+")");
+        L("│  │           Label : ShiftCal "+s.n+" "+(j+1));
+        L("│  │           Repeat: Off");
       });
     }
-    L("    Add Calendar Event:");
-    L("      Title: '"+s.e+" "+s.n+"'");
-    L("      Date: TargetDate");
-    L("      Start: "+s.s+" | End: "+s.f+(s.nd?" (+1 day)":""));
-    L("");
+    L("│  │  Action : Add New Event");
+    L("│  │           Title  : '"+s.e+" "+s.n+"'");
+    L("│  │           Date   : [TargetDate]");
+    L("│  │           Starts : "+s.s+"   Ends: "+s.f+(s.nd?" (next day)":""));
+    L("│  │           Calendar: ShiftCal  ← create this in Calendar app first");
+    L("│  │");
   });
-  if(offShifts.length){
-    var offDays=[];
-    offShifts.forEach(function(k){offDays=offDays.concat(groups[k]);});
-    offDays.sort(function(a,b){return a-b;});
-    L("    Otherwise (CycleDay in ["+offDays.join(", ")+"])");
-    L("    # -> Rest / Off / Leave day");
-    L("    Delete any ShiftCal- alarms (cleanup)");
-    L("");
+  if(offDaysList.length){
+    L("│  Else   # Rest day (positions "+offDaysList.join(", ")+")");
+    L("│  │  # No alarm needed — cleanup already done in Step 5");
+    L("│  │  Action : Show Notification  'ShiftCal — rest day, no alarm'");
+    L("│  │");
   }
-  L("[6] CONFIRM");
-  L("    Show Notification: 'ShiftCal OK - alarms set for TargetDate'");
+  L("│  [End If]");
+  L("└────────────────────────────────────────────────────");
   L("");
-  L("# ================================================");
-  L("# AUTOMATION SETUP");
-  L("# ================================================");
-  L("1. Shortcuts app -> + -> name 'ShiftCal Sync'");
-  L("2. Add the actions above in order");
-  L("3. Automation tab -> + -> Time of Day");
-  L("4. Set time: "+rLabel+" | Repeat: Daily");
-  L("5. Select shortcut: ShiftCal Sync");
-  L("6. Turn OFF 'Ask Before Running' -> Done");
+  L("┌─ ACTION 7: Final notification ─────────────────────");
+  L("│  Action : Format Date    [TargetDate]   format = EEE d MMM");
+  L("│  Action : Show Notification");
+  L("│           Title : ShiftCal ✓");
+  L("│           Body  : 'Alarms set for ' + [Formatted Date]");
+  L("└────────────────────────────────────────────────────");
   L("");
-  L("# Existing alarms with same label are skipped.");
-  L("# Fired alarms are deleted on next nightly run.");
+  L("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  L("STEP 2  Create the nightly automation");
+  L("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  L("Shortcuts app → Automation tab → [+]");
+  L("→ Personal Automation → Time of Day");
+  L("   Time   : "+rLabel);
+  L("   Repeat : Daily");
+  L("→ Next → search for [Run Shortcut]");
+  L("   Shortcut: ShiftCal Sync");
+  L("→ IMPORTANT: Turn OFF 'Ask Before Running'  ← critical!");
+  L("→ Tap Done ✓");
+  L("");
+  L("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  L("NOTES");
+  L("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  L("• iPhone must be unlocked (or 'Allow While Locked' enabled)");
+  L("  for automation to run without user interaction.");
+  L("• Old alarms are deleted every run before new ones are added.");
+  L("• If the cycle start date changes, regenerate this script");
+  L("  and update ACTION 1 with the new date: "+cs);
+  L("");
+  L("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  L("ALTERNATIVE: ICS Calendar Method (easier, no Shortcuts needed)");
+  L("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  L("Settings tab → Calendar & Sync → Export to iPhone Calendar (.ics)");
+  L("  1. Export 2 Months → open the .ics file on iPhone");
+  L("  2. Tap 'Add All' in Calendar — shifts appear with alerts");
+  L("  3. Re-export monthly when you open this app");
+  L("  4. Enable Calendar notifications in iPhone Settings");
+  L("  ★ Calendar alerts sound at your configured alarm times");
   document.getElementById('scOut').textContent=lines.join('\n');
 }
 
@@ -1295,6 +1695,39 @@ function cpScript(){var t=document.getElementById('scOut').textContent;silentCop
 loadST();
 document.getElementById('yr').textContent=new Date().getFullYear();
 render();
+checkIcsRefresh();
+
+// Auto-refresh: fire whenever app comes back to foreground (iOS PWA pageshow)
+// iOS blocks file downloads without a user gesture, so we show the banner
+// and trigger the export on the very first tap — feels automatic to the user.
+var _autoArmed=false;
+function armAutoIfStale(){
+  if(_autoArmed)return;
+  var stale=!ST.lastIcsExport;
+  if(!stale&&ST.lastIcsExport){var ago=Math.round((Date.now()-pd(ST.lastIcsExport).getTime())/86400000);stale=ago>=25;}
+  if(!stale)return;
+  _autoArmed=true;
+  function _fire(){
+    document.removeEventListener('touchend',_fire,true);
+    document.removeEventListener('click',_fire,true);
+    _autoArmed=false;
+    // Only auto-export if we're still on the calendar tab (not in a sheet)
+    if(curTab==='cal'&&!document.querySelector('.ov.op')){
+      doIcsAutoQuick();
+    }
+  }
+  document.addEventListener('touchend',_fire,true);
+  document.addEventListener('click',_fire,true);
+}
+armAutoIfStale();
+
+// Re-check when app comes back from background (PWA home screen tap)
+window.addEventListener('pageshow',function(e){
+  if(e.persisted){loadST();render();checkIcsRefresh();armAutoIfStale();}
+});
+document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState==='visible'){checkIcsRefresh();armAutoIfStale();}
+});
 </script>
 
 </body>
