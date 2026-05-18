@@ -177,6 +177,7 @@ input[type=time],input[type=number]{width:auto;}
       <div class="sc2">
         <div class="sr2" id="syncRow" style="cursor:pointer"><div><div class="sl2">&#9889; Shortcuts Script</div><div class="ss2">Auto alarm + calendar nightly</div></div><span style="color:var(--mu)">&#8250;</span></div>
         <div class="sr2" id="exportRow" style="cursor:pointer"><div><div class="sl2">&#128197; Export to iPhone Calendar (.ics)</div><div class="ss2" id="exportRowSub">Tap to set alarms via Calendar</div></div><span style="color:var(--mu)">&#8250;</span></div>
+        <div class="sr2" id="deleteCalRow" style="cursor:pointer" onclick="doIcsCancel(12)"><div><div class="sl2" style="color:var(--sick)">&#128465; Delete Exported Calendar Events</div><div class="ss2">Downloads cancel file — open in Calendar to remove</div></div><span style="color:var(--mu)">&#8250;</span></div>
       </div>
       <div class="sct">Temporary Period Patterns</div>
       <div id="tpList"></div>
@@ -377,7 +378,17 @@ input[type=time],input[type=number]{width:auto;}
     <div style="background:var(--s2);border-radius:10px;padding:10px 13px;font-size:12px;color:var(--mu);line-height:1.7;margin-bottom:10px">
       &#128276; Each calendar event includes alert reminders at your configured alarm times. Enable <strong style="color:var(--tx)">Calendar notifications</strong> in iPhone Settings &#8594; Notifications &#8594; Calendar.
     </div>
-    <button class="btn bs" onclick="closeOv('icsOv')">Done</button>
+    <div style="margin-top:4px;padding-top:10px;border-top:1px solid var(--bd)">
+      <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px">Delete previously imported events</div>
+      <div style="background:#1A0606;border:1px solid #EF444440;border-radius:11px;padding:11px;margin-bottom:8px;font-size:12px;color:#EF4444;line-height:1.7">
+        Downloads a cancel file covering the same range. Open it in Calendar to remove old ShiftCal events. Do this before re-importing a fresh export to avoid duplicates.
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button onclick="doIcsCancel(2)" style="padding:11px 8px;border-radius:11px;border:1px solid #EF444460;background:#1A0606;color:#EF4444;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;text-align:center">&#128465; Delete 2 Months</button>
+        <button onclick="doIcsCancel(12)" style="padding:11px 8px;border-radius:11px;border:1px solid #EF444640;background:#1A0606;color:#EF4444;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;text-align:center">&#128465; Delete 12 Months</button>
+      </div>
+    </div>
+    <button class="btn bs" onclick="closeOv('icsOv')" style="margin-top:10px">Done</button>
   </div>
 </div>
 </div>
@@ -1247,7 +1258,7 @@ function doIcsExport(months){
       var dtE=ep2[0]+ep2[1]+ep2[2]+'T'+s.f.replace(':','')+'00';
       var nt=ST.nt[ds];
       lines.push('BEGIN:VEVENT');
-      lines.push('UID:sc2-'+ds+'-'+sk+'@shiftcal');
+      lines.push('UID:sc3-'+ds+'-'+sk+'@shiftcal');
       lines.push('DTSTAMP:'+stamp);
       lines.push('DTSTART:'+dtS);
       lines.push('DTEND:'+dtE);
@@ -1282,6 +1293,43 @@ function doIcsExport(months){
   if(statusEl)statusEl.innerHTML='<span style="color:#10B981">&#10003; Exported '+count+' shifts ('+months+' month'+(months>1?'s':'')+'). Open the downloaded file to import into Calendar.</span>';
   updateExportRowSub();
   renderSyncBar(dk(new Date()));
+  return count;
+}
+
+function doIcsCancel(months){
+  // Cancels all previously exported events (sc-, sc2-, sc3- UIDs) so Calendar removes them
+  var lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//ShiftCal//EN','CALSCALE:GREGORIAN','METHOD:CANCEL'];
+  var today=new Date();today.setHours(0,0,0,0);
+  var end=new Date(today);end.setMonth(end.getMonth()+months);
+  var stamp=new Date().toISOString().replace(/[-:.]/g,'').slice(0,15)+'Z';
+  var count=0;
+  var cur=new Date(today);
+  while(cur<end){
+    var ds=dk(cur);var sk=getShift(ds);var s=SH[sk];
+    if(s&&s.s){
+      var p=ds.split('-');
+      var dtS=p[0]+p[1]+p[2]+'T'+s.s.replace(':','')+'00';
+      ['sc','sc2','sc3'].forEach(function(pfx){
+        lines.push('BEGIN:VEVENT');
+        lines.push('UID:'+pfx+'-'+ds+'-'+sk+'@shiftcal');
+        lines.push('DTSTAMP:'+stamp);
+        lines.push('DTSTART:'+dtS);
+        lines.push('STATUS:CANCELLED');
+        lines.push('SEQUENCE:2');
+        lines.push('END:VEVENT');
+      });
+      count++;
+    }
+    cur=aD(cur,1);
+  }
+  lines.push('END:VCALENDAR');
+  var b64=btoa(unescape(encodeURIComponent(lines.join('\r\n'))));
+  var a=document.createElement('a');
+  a.href='data:text/calendar;base64,'+b64;
+  a.download='ShiftCal-Cancel-'+months+'mo.ics';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  var statusEl=document.getElementById('icsStatus');
+  if(statusEl)statusEl.innerHTML='<span style="color:#EF4444">&#10005; Cancel file downloaded ('+count+' events). Open it in Calendar — events will be removed.</span>';
   return count;
 }
 
@@ -1697,9 +1745,8 @@ document.getElementById('yr').textContent=new Date().getFullYear();
 render();
 checkIcsRefresh();
 
-// Auto-refresh: fire whenever app comes back to foreground (iOS PWA pageshow)
-// iOS blocks file downloads without a user gesture, so we show the banner
-// and trigger the export on the very first tap — feels automatic to the user.
+// Auto-refresh: if calendar is stale, auto-open the ICS sheet so user just taps Export.
+// Opening a sheet (adding a CSS class) doesn't need a user gesture — only the file download does.
 var _autoArmed=false;
 function armAutoIfStale(){
   if(_autoArmed)return;
@@ -1707,17 +1754,12 @@ function armAutoIfStale(){
   if(!stale&&ST.lastIcsExport){var ago=Math.round((Date.now()-pd(ST.lastIcsExport).getTime())/86400000);stale=ago>=25;}
   if(!stale)return;
   _autoArmed=true;
-  function _fire(){
-    document.removeEventListener('touchend',_fire,true);
-    document.removeEventListener('click',_fire,true);
+  setTimeout(function(){
     _autoArmed=false;
-    // Only auto-export if we're still on the calendar tab (not in a sheet)
     if(curTab==='cal'&&!document.querySelector('.ov.op')){
-      doIcsAutoQuick();
+      openIcsSheet();
     }
-  }
-  document.addEventListener('touchend',_fire,true);
-  document.addEventListener('click',_fire,true);
+  },1200);
 }
 armAutoIfStale();
 
