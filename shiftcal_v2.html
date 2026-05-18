@@ -381,12 +381,12 @@ input[type=time],input[type=number]{width:auto;}
     <div id="icsDeleteInst" style="margin-top:4px;padding-top:10px;border-top:1px solid var(--bd)">
       <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px">Delete from iPhone Calendar</div>
       <div style="background:#1A0606;border:1px solid #EF444440;border-radius:11px;padding:13px;margin-bottom:8px;font-size:13px;color:#D0C0C0;line-height:2">
-        <strong style="color:#E8E8F8">Steps to delete all ShiftCal events:</strong><br/>
-        1. Open the <strong style="color:#E8E8F8">Calendar</strong> app on iPhone<br/>
+        <strong style="color:#E8E8F8">&#9888;&#65039; Do this FIRST if Calendar shows wrong events:</strong><br/>
+        1. Open <strong style="color:#E8E8F8">Calendar</strong> app on iPhone<br/>
         2. Tap <strong style="color:#E8E8F8">Calendars</strong> at the bottom<br/>
         3. Tap <strong style="color:#E8E8F8">&#9432;</strong> next to <strong style="color:#E8E8F8">My Shift Schedule</strong><br/>
         4. Scroll down &#8594; tap <strong style="color:#EF4444">Delete Calendar</strong><br/>
-        5. Come back here and re-export fresh
+        5. Come back here and export fresh — all events will show correctly
       </div>
       <a href="calshow://" style="display:block;text-align:center;padding:12px;border-radius:11px;border:1px solid #EF444460;background:#1A0606;color:#EF4444;font-family:-apple-system,sans-serif;font-size:13px;font-weight:700;text-decoration:none;margin-bottom:8px">&#128197; Open Calendar App</a>
       <button onclick="closeOv('icsOv');setTimeout(function(){setScMode('cleanup');genCleanup();document.getElementById('scOv').classList.add('op');},200)" style="width:100%;padding:12px;border-radius:11px;border:1px solid #EF444460;background:#1A0606;color:#EF4444;font-family:-apple-system,sans-serif;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:4px">&#128187; Get Scriptable Cleanup Code</button>
@@ -423,6 +423,7 @@ input[type=time],input[type=number]{width:auto;}
     <!-- Scriptable info panel (hidden by default) -->
     <div id="scCodeInfo" style="display:none;background:#001014;border:1px solid #10B98140;border-radius:10px;padding:11px;margin-bottom:8px;font-size:12px;color:#10B981;line-height:1.8">
       <strong style="color:#E8E8F8">&#128187; Scriptable (free App Store app):</strong><br/>
+      0. iPhone Calendar app &#8594; Calendars &#8594; Add Calendar &#8594; name it <strong>ShiftCal</strong><br/>
       1. Install <strong>Scriptable</strong> from App Store<br/>
       2. Tap [+] &#8594; paste the code below &#8594; name it <strong>ShiftCal Sync</strong><br/>
       3. Shortcuts app &#8594; Automation &#8594; + &#8594; Time of Day<br/>
@@ -1256,6 +1257,16 @@ function refreshOT(){
 
 // ── ICS EXPORT ────────────────────────────────────────────────────────────────
 function doIcsExport(months){
+  // Escape special characters in ICS text fields (RFC 5545 §3.3.11)
+  function esc(s){return String(s||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n');}
+  // Fold long lines at 75 octets per RFC 5545 §3.1
+  function fold(s){
+    if(s.length<=75)return s;
+    var o=s.substring(0,75);var i=75;
+    while(i<s.length){o+='\r\n '+s.substring(i,i+74);i+=74;}
+    return o;
+  }
+
   var lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//ShiftCal//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH',
     'X-WR-CALNAME:My Shift Schedule','X-APPLE-CALENDAR-COLOR:#818CF8'];
   var today=new Date();today.setHours(0,0,0,0);
@@ -1264,6 +1275,7 @@ function doIcsExport(months){
   var count=0;
   var typeCounts={};
   var stamp=new Date().toISOString().replace(/[-:.]/g,'').slice(0,15)+'Z';
+
   while(cur<end){
     var ds=dk(cur);var sk=getShift(ds);var s=SH[sk];
     if(s&&s.s){
@@ -1273,16 +1285,15 @@ function doIcsExport(months){
       var dtE=ep2[0]+ep2[1]+ep2[2]+'T'+s.f.replace(':','')+'00';
       var nt=ST.nt[ds];
       lines.push('BEGIN:VEVENT');
-      lines.push('UID:sc3-'+ds+'-'+sk+'@shiftcal');
+      lines.push('UID:sc5-'+ds+'-'+sk+'@shiftcal');
       lines.push('DTSTAMP:'+stamp);
+      lines.push('SEQUENCE:0');
       lines.push('DTSTART:'+dtS);
       lines.push('DTEND:'+dtE);
-      lines.push('SUMMARY:'+s.n+' Shift');
-      lines.push('DESCRIPTION:'+(nt||s.n+' shift ('+s.s+'-'+s.f+')'));
+      lines.push(fold('SUMMARY:'+esc(s.n+' Shift')));
+      lines.push(fold('DESCRIPTION:'+esc(nt||s.n+' shift ('+s.s+'-'+s.f+')')));
       lines.push('STATUS:CONFIRMED');
       lines.push('TRANSP:OPAQUE');
-      // ACTION:DISPLAY is the correct type for iOS Calendar event reminders
-      // ACTION:AUDIO requires an ATTACH property and is unreliable without it
       alm.forEach(function(a,i){
         var ap=a.split(':').map(Number);
         var sp2=s.s.split(':').map(Number);
@@ -1291,28 +1302,29 @@ function doIcsExport(months){
         lines.push('BEGIN:VALARM');
         lines.push('TRIGGER:-PT'+df+'M');
         lines.push('ACTION:DISPLAY');
-        lines.push('DESCRIPTION:'+s.n+' shift starting - alarm '+(i+1));
+        lines.push(fold('DESCRIPTION:'+esc(s.n+' shift starting - alarm '+(i+1))));
         lines.push('END:VALARM');
       });
       lines.push('END:VEVENT');
-      count++;
-      typeCounts[sk]=(typeCounts[sk]||0)+1;
+      count++;typeCounts[sk]=(typeCounts[sk]||0)+1;
     }
     cur=aD(cur,1);
   }
   lines.push('END:VCALENDAR');
-  // data: URI is required for iOS Safari/PWA — Blob URLs (blob:null/...) are not
-  // treated as file downloads on iOS WKWebView, causing truncated or missing imports.
+
+  // data: URI is required for iOS Safari/PWA — Blob URLs are not treated as
+  // file downloads in WKWebView (PWA mode), causing silent truncation or no import.
   var content=lines.join('\r\n');
   var b64=btoa(unescape(encodeURIComponent(content)));
   var a=document.createElement('a');
   a.href='data:text/calendar;base64,'+b64;
   a.download='ShiftCal-'+months+'mo.ics';
   document.body.appendChild(a);a.click();document.body.removeChild(a);
+
   ST.lastIcsExport=dk(today);savST();
   var breakdown=Object.keys(typeCounts).map(function(k){return SH[k].n+' x'+typeCounts[k];}).join(', ');
   var statusEl=document.getElementById('icsStatus');
-  if(statusEl)statusEl.innerHTML='<span style="color:#10B981">&#10003; '+count+' shifts exported ('+months+' month'+(months>1?'s':'')+')<br><span style="font-size:11px;color:#10B981;opacity:.8">'+breakdown+'</span></span>';
+  if(statusEl)statusEl.innerHTML='<span style="color:#10B981">&#10003; '+count+' shifts exported ('+months+' month'+(months>1?'s':'')+')<br><span style="font-size:11px;color:#10B981;opacity:.8">'+breakdown+'<br>Note: delete old calendar first if events look wrong</span></span>';
   updateExportRowSub();
   updateCalBar();
   return count;
@@ -1468,6 +1480,11 @@ function genScriptable(){
   L('//      → Run Script → Script: ShiftCal Sync');
   L('//      → Turn OFF "Ask Before Running" → Done ✓');
   L('//');
+  L('// PRE-REQUISITE (one time):');
+  L('//   Open iPhone Calendar app → Calendars (bottom) → Add Calendar');
+  L('//   Name it exactly: ShiftCal   ← script looks for this name');
+  L('//   If not found, script falls back to your default calendar.');
+  L('//');
   L('// WHAT IT DOES NIGHTLY:');
   L('//   • Calculates tomorrow\'s shift from your cycle');
   L('//   • Adds a ShiftCal calendar event (shift start/end)');
@@ -1522,14 +1539,20 @@ function genScriptable(){
   L('const sh = SH[sk];');
   L('');
   L('// ── Calendar events ─────────────────────────────────────');
-  L('const cal       = await Calendar.findOrCreate(CAL_NAME);');
+  L('// Calendar.findOrCreate only works for Reminders in Scriptable.');
+  L('// For event calendars, search by title from forEvents().');
+  L('const allEvCals = await Calendar.forEvents();');
+  L('const cal       = allEvCals.find(c => c.title === CAL_NAME)');
+  L('                  || allEvCals.find(c => c.allowsContentModifications)');
+  L('                  || allEvCals[0];');
+  L('if (!cal) { console.error("No writable event calendar found"); Script.complete(); }');
   L('const dayStart  = new Date(target);');
   L('const dayEnd    = new Date(target); dayEnd.setHours(23, 59, 59, 999);');
   L('const oldEvents = await CalendarEvent.between(dayStart, dayEnd, [cal]);');
   L('for (const ev of oldEvents) await ev.remove();');
   L('');
   L('// ── Reminders (alarm sound) ──────────────────────────────');
-  L('// Find or use first available reminders calendar');
+  L('// Calendar.findOrCreate IS valid for Reminder calendars');
   L('const remCals   = await Calendar.forReminders();');
   L('const remCal    = remCals.find(c => c.title === REM_CAL) || remCals[0];');
   L('if (remCal) {');
