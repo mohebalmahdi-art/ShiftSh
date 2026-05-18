@@ -367,13 +367,21 @@ input[type=time],input[type=number]{width:auto;}
       <button onclick="doIcsExport(3)" style="padding:12px 8px;border-radius:11px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;text-align:center">&#128197; 3 Months<div style="font-size:10px;font-weight:400;color:var(--mu);margin-top:3px">~90 shifts</div></button>
       <button onclick="doIcsExport(12)" style="padding:12px 8px;border-radius:11px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;text-align:center">&#128197; 12 Months<div style="font-size:10px;font-weight:400;color:var(--mu);margin-top:3px">Full year</div></button>
     </div>
+    <div style="background:#1A1400;border:1px solid #FBBF2440;border-radius:11px;padding:11px;font-size:13px;color:#FBBF24;line-height:1.8;margin-bottom:8px">
+      <strong style="color:#E8E8F8">&#9888; Do this FIRST (one time only):</strong><br/>
+      iPhone <strong>Settings</strong> &#8594; <strong>Calendar</strong> &#8594; <strong>Default Calendar</strong><br/>
+      &#8594; select any calendar listed under <strong style="color:#fff">iCloud</strong><br/>
+      This ensures the ShiftCal calendar syncs to iCloud so ALL shifts appear.
+    </div>
     <div style="background:#001810;border:1px solid #10B98140;border-radius:11px;padding:12px;font-size:13px;color:#10B981;line-height:1.9;margin-bottom:8px">
       <strong style="color:#E8E8F8">&#128241; Import on iPhone:</strong><br/>
-      1. Tap an export button above &#8594; file downloads<br/>
-      2. Tap the downloaded .ics file<br/>
+      1. Tap an export button above &#8594; share sheet opens<br/>
+      2. Tap <strong>Save to Files</strong> &#8594; then open the .ics file<br/>
+      &nbsp;&nbsp; OR: share sheet &#8594; tap <strong>Calendar</strong> directly if shown<br/>
       3. iOS asks to open in <strong>Calendar</strong> &#8594; tap <strong>Add All</strong><br/>
-      4. Shifts appear with built-in alarm alerts<br/>
-      5. <strong>Re-export monthly</strong> when you open this app
+      4. Check: Calendar app &#8594; Calendars &#8594; <strong>ShiftCal</strong> must be under <strong>iCloud</strong> (not "On My iPhone")<br/>
+      5. All shifts (morning, afternoon, night) appear in iCloud within minutes<br/>
+      6. <strong>Re-export monthly</strong> when you open this app
     </div>
     <div style="background:var(--s2);border-radius:10px;padding:10px 13px;font-size:12px;color:var(--mu);line-height:1.7;margin-bottom:10px">
       &#128276; Each event has alarm reminders at your configured times (set in Settings &#8594; Alarms per Shift). Alarms ring even when iPhone is silenced — enable <strong style="color:var(--tx)">Calendar notifications</strong> in iPhone Settings &#8594; Notifications &#8594; Calendar.
@@ -381,13 +389,14 @@ input[type=time],input[type=number]{width:auto;}
     <div id="icsDeleteInst" style="margin-top:4px;padding-top:10px;border-top:1px solid var(--bd)">
       <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px">Delete from iPhone Calendar</div>
       <div style="background:#1A0606;border:1px solid #EF444440;border-radius:11px;padding:13px;margin-bottom:8px;font-size:13px;color:#D0C0C0;line-height:2">
-        <strong style="color:#E8E8F8">&#9888;&#65039; Do this FIRST if Calendar shows wrong events:</strong><br/>
-        1. Open <strong style="color:#E8E8F8">Calendar</strong> app on iPhone<br/>
-        2. Tap <strong style="color:#E8E8F8">Calendars</strong> at the bottom<br/>
-        3. Tap <strong style="color:#E8E8F8">&#9432;</strong> next to <strong style="color:#E8E8F8">ShiftCal</strong> (or <strong style="color:#E8E8F8">My Shift Schedule</strong> if present)<br/>
-        4. Scroll down &#8594; tap <strong style="color:#EF4444">Delete Calendar</strong><br/>
-        5. Repeat for the other calendar name if it also exists<br/>
-        6. Come back here and export fresh — all events will show correctly
+        <strong style="color:#E8E8F8">&#9888;&#65039; Why afternoon is missing on iCloud:</strong><br/>
+        The "ShiftCal" calendar may be under <strong style="color:#EF4444">On My iPhone</strong> (local, not iCloud-synced). Old "My Shift Schedule" on iCloud had afternoon cancelled.<br/><br/>
+        <strong style="color:#E8E8F8">Fix — delete ALL old ShiftCal calendars:</strong><br/>
+        1. Open <strong style="color:#E8E8F8">Calendar</strong> app &#8594; tap <strong style="color:#E8E8F8">Calendars</strong> at the bottom<br/>
+        2. Delete <strong style="color:#EF4444">every</strong> calendar named <strong style="color:#E8E8F8">ShiftCal</strong> (look under both <em>iCloud</em> and <em>On My iPhone</em>)<br/>
+        3. Also delete <strong style="color:#E8E8F8">My Shift Schedule</strong> if it exists<br/>
+        4. iPhone <strong>Settings</strong> &#8594; <strong>Calendar</strong> &#8594; <strong>Default Calendar</strong> &#8594; pick an <strong style="color:#E8E8F8">iCloud</strong> calendar<br/>
+        5. Come back here &#8594; export fresh &#8594; import &#8594; ShiftCal will now be under <strong>iCloud</strong> &#8594; all shifts sync &#10003;
       </div>
       <a href="calshow://" style="display:block;text-align:center;padding:12px;border-radius:11px;border:1px solid #EF444460;background:#1A0606;color:#EF4444;font-family:-apple-system,sans-serif;font-size:13px;font-weight:700;text-decoration:none;margin-bottom:8px">&#128197; Open Calendar App</a>
       <button onclick="closeOv('icsOv');setTimeout(function(){setScMode('cleanup');genCleanup();document.getElementById('scOv').classList.add('op');},200)" style="width:100%;padding:12px;border-radius:11px;border:1px solid #EF444460;background:#1A0606;color:#EF4444;font-family:-apple-system,sans-serif;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:4px">&#128187; Get Scriptable Cleanup Code</button>
@@ -424,7 +433,13 @@ input[type=time],input[type=number]{width:auto;}
     <!-- Scriptable info panel (hidden by default) -->
     <div id="scCodeInfo" style="display:none;background:#001014;border:1px solid #10B98140;border-radius:10px;padding:11px;margin-bottom:8px;font-size:12px;color:#10B981;line-height:1.8">
       <strong style="color:#E8E8F8">&#128187; Scriptable (free App Store app):</strong><br/>
-      0. iPhone Calendar app &#8594; Calendars &#8594; Add Calendar &#8594; name it <strong>ShiftCal</strong><br/>
+      <div style="background:#1A1400;border:1px solid #FBBF2440;border-radius:8px;padding:8px;margin:5px 0;color:#FBBF24;line-height:1.7">
+        <strong style="color:#fff">&#9888; Create iCloud calendar first (critical):</strong><br/>
+        iPhone Settings &#8594; Calendar &#8594; <strong>Default Calendar</strong><br/>
+        &#8594; pick any calendar under <strong>iCloud</strong> (not "On My iPhone")<br/>
+        Then: Calendar app &#8594; Calendars &#8594; <strong>Add Calendar</strong> &#8594; name it <strong>ShiftCal</strong><br/>
+        &#9888; It must appear under <strong>iCloud</strong> in the list, not "On My iPhone"
+      </div>
       1. Install <strong>Scriptable</strong> from App Store<br/>
       2. Tap [+] &#8594; paste the code below &#8594; name it <strong>ShiftCal Sync</strong><br/>
       3. Shortcuts app &#8594; Automation &#8594; + &#8594; Time of Day<br/>
@@ -1496,10 +1511,11 @@ function genScriptable(){
   L('//      → Run Script → Script: ShiftCal Sync');
   L('//      → Turn OFF "Ask Before Running" → Done ✓');
   L('//');
-  L('// PRE-REQUISITE (one time):');
-  L('//   Open iPhone Calendar app → Calendars (bottom) → Add Calendar');
-  L('//   Name it exactly: ShiftCal   ← script looks for this name');
-  L('//   If not found, script falls back to your default calendar.');
+  L('// PRE-REQUISITE (one time — CRITICAL):');
+  L('//   iPhone Settings → Calendar → Default Calendar → pick any iCloud calendar');
+  L('//   Then: Calendar app → Calendars (bottom) → Add Calendar');
+  L('//   Name it exactly: ShiftCal   ← must appear under iCloud, NOT "On My iPhone"');
+  L('//   If it\'s under "On My iPhone" events won\'t sync → afternoon missing on iCloud!');
   L('//');
   L('// WHAT IT DOES NIGHTLY:');
   L('//   • Calculates tomorrow\'s shift from your cycle');
