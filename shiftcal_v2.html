@@ -384,9 +384,10 @@ input[type=time],input[type=number]{width:auto;}
         <strong style="color:#E8E8F8">&#9888;&#65039; Do this FIRST if Calendar shows wrong events:</strong><br/>
         1. Open <strong style="color:#E8E8F8">Calendar</strong> app on iPhone<br/>
         2. Tap <strong style="color:#E8E8F8">Calendars</strong> at the bottom<br/>
-        3. Tap <strong style="color:#E8E8F8">&#9432;</strong> next to <strong style="color:#E8E8F8">My Shift Schedule</strong><br/>
+        3. Tap <strong style="color:#E8E8F8">&#9432;</strong> next to <strong style="color:#E8E8F8">ShiftCal</strong> (or <strong style="color:#E8E8F8">My Shift Schedule</strong> if present)<br/>
         4. Scroll down &#8594; tap <strong style="color:#EF4444">Delete Calendar</strong><br/>
-        5. Come back here and export fresh — all events will show correctly
+        5. Repeat for the other calendar name if it also exists<br/>
+        6. Come back here and export fresh — all events will show correctly
       </div>
       <a href="calshow://" style="display:block;text-align:center;padding:12px;border-radius:11px;border:1px solid #EF444460;background:#1A0606;color:#EF4444;font-family:-apple-system,sans-serif;font-size:13px;font-weight:700;text-decoration:none;margin-bottom:8px">&#128197; Open Calendar App</a>
       <button onclick="closeOv('icsOv');setTimeout(function(){setScMode('cleanup');genCleanup();document.getElementById('scOv').classList.add('op');},200)" style="width:100%;padding:12px;border-radius:11px;border:1px solid #EF444460;background:#1A0606;color:#EF4444;font-family:-apple-system,sans-serif;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:4px">&#128187; Get Scriptable Cleanup Code</button>
@@ -1268,7 +1269,7 @@ function doIcsExport(months){
   }
 
   var lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//ShiftCal//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH',
-    'X-WR-CALNAME:My Shift Schedule','X-APPLE-CALENDAR-COLOR:#818CF8'];
+    'X-WR-CALNAME:ShiftCal','X-APPLE-CALENDAR-COLOR:#818CF8'];
   var today=new Date();today.setHours(0,0,0,0);
   var end=new Date(today);end.setMonth(end.getMonth()+months);
   var cur=new Date(today);
@@ -1312,19 +1313,34 @@ function doIcsExport(months){
   }
   lines.push('END:VCALENDAR');
 
-  // data: URI is required for iOS Safari/PWA — Blob URLs are not treated as
-  // file downloads in WKWebView (PWA mode), causing silent truncation or no import.
-  var content=lines.join('\r\n');
-  var b64=btoa(unescape(encodeURIComponent(content)));
-  var a=document.createElement('a');
-  a.href='data:text/calendar;base64,'+b64;
-  a.download='ShiftCal-'+months+'mo.ics';
-  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  var content=lines.join('\r\n')+'\r\n';
+  var fname='ShiftCal-'+months+'mo.ics';
+  // Try Web Share API first (iOS 15+ PWA — most reliable path to Calendar import)
+  var shared=false;
+  try{
+    if(navigator.share&&navigator.canShare){
+      var f=new File([content],fname,{type:'text/calendar'});
+      if(navigator.canShare({files:[f]})){
+        shared=true;
+        navigator.share({files:[f],title:'ShiftCal Schedule'}).catch(function(){});
+      }
+    }
+  }catch(e){}
+  if(!shared){
+    // Fallback: data: URI anchor click (works in Safari/PWA)
+    var b64;
+    try{b64=btoa(content);}
+    catch(e){b64=btoa(unescape(encodeURIComponent(content)));}
+    var a=document.createElement('a');
+    a.href='data:text/calendar;base64,'+b64;
+    a.download=fname;
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+  }
 
   ST.lastIcsExport=dk(today);savST();
   var breakdown=Object.keys(typeCounts).map(function(k){return SH[k].n+' x'+typeCounts[k];}).join(', ');
   var statusEl=document.getElementById('icsStatus');
-  if(statusEl)statusEl.innerHTML='<span style="color:#10B981">&#10003; '+count+' shifts exported ('+months+' month'+(months>1?'s':'')+')<br><span style="font-size:11px;color:#10B981;opacity:.8">'+breakdown+'<br>Note: delete old calendar first if events look wrong</span></span>';
+  if(statusEl)statusEl.innerHTML='<span style="color:#10B981">&#10003; '+count+' shifts exported ('+months+' month'+(months>1?'s':'')+')<br><span style="font-size:11px;color:#10B981;opacity:.8">'+breakdown+'<br>Events go into "<strong>ShiftCal</strong>" calendar. If events look wrong, delete that calendar first then re-export.</span></span>';
   updateExportRowSub();
   updateCalBar();
   return count;
