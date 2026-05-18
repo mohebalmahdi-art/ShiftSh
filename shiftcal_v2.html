@@ -1314,28 +1314,13 @@ function doIcsExport(months){
   lines.push('END:VCALENDAR');
 
   var content=lines.join('\r\n')+'\r\n';
-  var fname='ShiftCal-'+months+'mo.ics';
-  // Try Web Share API first (iOS 15+ PWA — most reliable path to Calendar import)
-  var shared=false;
-  try{
-    if(navigator.share&&navigator.canShare){
-      var f=new File([content],fname,{type:'text/calendar'});
-      if(navigator.canShare({files:[f]})){
-        shared=true;
-        navigator.share({files:[f],title:'ShiftCal Schedule'}).catch(function(){});
-      }
-    }
-  }catch(e){}
-  if(!shared){
-    // Fallback: data: URI anchor click (works in Safari/PWA)
-    var b64;
-    try{b64=btoa(content);}
-    catch(e){b64=btoa(unescape(encodeURIComponent(content)));}
-    var a=document.createElement('a');
-    a.href='data:text/calendar;base64,'+b64;
-    a.download=fname;
-    document.body.appendChild(a);a.click();document.body.removeChild(a);
-  }
+  var b64;
+  try{b64=btoa(content);}
+  catch(e){b64=btoa(unescape(encodeURIComponent(content)));}
+  var a=document.createElement('a');
+  a.href='data:text/calendar;base64,'+b64;
+  a.download='ShiftCal-'+months+'mo.ics';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
 
   ST.lastIcsExport=dk(today);savST();
   var breakdown=Object.keys(typeCounts).map(function(k){return SH[k].n+' x'+typeCounts[k];}).join(', ');
