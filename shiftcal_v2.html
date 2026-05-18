@@ -388,7 +388,8 @@ input[type=time],input[type=number]{width:auto;}
         4. Scroll down &#8594; tap <strong style="color:#EF4444">Delete Calendar</strong><br/>
         5. Come back here and re-export fresh
       </div>
-      <a href="calshow://" style="display:block;text-align:center;padding:12px;border-radius:11px;border:1px solid #EF444460;background:#1A0606;color:#EF4444;font-family:-apple-system,sans-serif;font-size:13px;font-weight:700;text-decoration:none;margin-bottom:4px">&#128197; Open Calendar App</a>
+      <a href="calshow://" style="display:block;text-align:center;padding:12px;border-radius:11px;border:1px solid #EF444460;background:#1A0606;color:#EF4444;font-family:-apple-system,sans-serif;font-size:13px;font-weight:700;text-decoration:none;margin-bottom:8px">&#128197; Open Calendar App</a>
+      <button onclick="closeOv('icsOv');setTimeout(function(){setScMode('cleanup');genCleanup();document.getElementById('scOv').classList.add('op');},200)" style="width:100%;padding:12px;border-radius:11px;border:1px solid #EF444460;background:#1A0606;color:#EF4444;font-family:-apple-system,sans-serif;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:4px">&#128187; Get Scriptable Cleanup Code</button>
     </div>
     <button class="btn bs" onclick="closeOv('icsOv')" style="margin-top:6px">Done</button>
   </div>
@@ -405,9 +406,10 @@ input[type=time],input[type=number]{width:auto;}
     <div style="display:flex;gap:3px;background:var(--s2);border-radius:10px;padding:3px;margin-bottom:10px">
       <button id="scTabSteps" onclick="setScMode('steps')" style="flex:1;padding:8px 4px;border-radius:8px;border:none;background:#818CF8;color:#fff;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer">&#128203; Shortcuts Steps</button>
       <button id="scTabCode" onclick="setScMode('scriptable')" style="flex:1;padding:8px 4px;border-radius:8px;border:none;background:none;color:var(--mu);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer">&#128187; Scriptable Code</button>
+      <button id="scTabClean" onclick="setScMode('cleanup')" style="flex:1;padding:8px 4px;border-radius:8px;border:none;background:none;color:var(--mu);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer">&#128465; Cleanup</button>
     </div>
-    <!-- Shared settings -->
-    <div style="background:var(--s2);border-radius:11px;padding:10px 12px;margin-bottom:10px">
+    <!-- Shared settings (hidden in cleanup mode) -->
+    <div id="scSharedSettings" style="background:var(--s2);border-radius:11px;padding:10px 12px;margin-bottom:10px">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div><div style="font-size:11px;color:var(--mu);margin-bottom:3px">Run time (nightly)</div>
           <select id="scTime" style="width:100%"><option value="22:00" selected>10:00 PM</option><option value="21:00">9:00 PM</option><option value="20:00">8:00 PM</option><option value="23:00">11:00 PM</option><option value="00:00">12:00 AM</option></select>
@@ -431,6 +433,15 @@ input[type=time],input[type=number]{width:auto;}
     <!-- Steps info panel -->
     <div id="scStepsInfo" style="background:var(--night-bg);border:1px solid var(--night);border-radius:10px;padding:11px;margin-bottom:8px;font-size:12px;color:#A0A0D0;line-height:1.7">
       Step-by-step guide to build the shortcut manually in the <strong style="color:#E8E8F8">Shortcuts app</strong>. Each action uses exact names you can search in Shortcuts.
+    </div>
+    <!-- Cleanup info panel -->
+    <div id="scCleanInfo" style="display:none;background:#1A0606;border:1px solid #EF444440;border-radius:10px;padding:11px;margin-bottom:8px;font-size:12px;color:#D0B0B0;line-height:1.8">
+      <strong style="color:#E8E8F8">&#128465; Calendar Cleanup Script (Scriptable):</strong><br/>
+      Deletes <strong>ALL</strong> ShiftCal events from ALL calendars — including cancelled events previously imported. Run once to start fresh.<br/>
+      1. Install <strong>Scriptable</strong> from App Store (free)<br/>
+      2. Tap [+] &#8594; paste the code below &#8594; name it <strong>ShiftCal Cleanup</strong><br/>
+      3. Tap &#9654; Run — wait for the confirmation alert<br/>
+      4. Come back here and re-export a fresh .ics calendar
     </div>
     <div id="scOut" style="background:var(--bg);border:1px solid var(--bd);border-radius:11px;padding:12px;font-family:'Courier New',monospace;font-size:11px;color:#C0E0C0;line-height:1.8;white-space:pre-wrap;word-break:break-word;max-height:300px;overflow-y:auto;margin-bottom:8px"></div>
     <button onclick="cpScript()" id="scCpBtn" style="width:100%;padding:10px;border-radius:11px;border:1px solid var(--night);background:var(--night-bg);color:#818CF8;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">&#128203; Copy</button>
@@ -1398,16 +1409,22 @@ var scMode='steps';
 function setScMode(m){
   scMode=m;
   var isCode=m==='scriptable';
-  document.getElementById('scTabSteps').style.background=isCode?'none':'#818CF8';
-  document.getElementById('scTabSteps').style.color=isCode?'var(--mu)':'#fff';
+  var isClean=m==='cleanup';
+  var isSteps=m==='steps';
+  document.getElementById('scTabSteps').style.background=isSteps?'#818CF8':'none';
+  document.getElementById('scTabSteps').style.color=isSteps?'#fff':'var(--mu)';
   document.getElementById('scTabCode').style.background=isCode?'#10B981':'none';
   document.getElementById('scTabCode').style.color=isCode?'#000':'var(--mu)';
+  document.getElementById('scTabClean').style.background=isClean?'#EF4444':'none';
+  document.getElementById('scTabClean').style.color=isClean?'#fff':'var(--mu)';
   document.getElementById('scCodeInfo').style.display=isCode?'block':'none';
-  document.getElementById('scStepsInfo').style.display=isCode?'none':'block';
-  document.getElementById('scOut').style.color=isCode?'#A0FFC0':'#C0E0C0';
+  document.getElementById('scStepsInfo').style.display=isSteps?'block':'none';
+  document.getElementById('scCleanInfo').style.display=isClean?'block':'none';
+  document.getElementById('scSharedSettings').style.display=isClean?'none':'block';
+  document.getElementById('scOut').style.color=isClean?'#FF9090':isCode?'#A0FFC0':'#C0E0C0';
   runScGen();
 }
-function runScGen(){if(scMode==='scriptable')genScriptable();else genScript();}
+function runScGen(){if(scMode==='scriptable')genScriptable();else if(scMode==='cleanup')genCleanup();else genScript();}
 document.getElementById('syncRow').onclick=function(){genScript();document.getElementById('scOv').classList.add('op');};
 
 function genScriptable(){
@@ -1562,6 +1579,103 @@ function genScriptable(){
   L('Script.complete();');
   document.getElementById('scOut').textContent=lines.join('\n');
 }
+
+function genCleanup(){
+  var lines=[];
+  var L=function(s){lines.push(s);};
+
+  // Build list of all shift names for matching
+  var shiftTitles=Object.keys(SH).filter(function(k){return SH[k].s;}).map(function(k){return SH[k].n+' Shift';});
+  // Also include emoji-prefixed titles from Scriptable sync script
+  var shiftTitlesEmoji=Object.keys(SH).filter(function(k){return SH[k].s;}).map(function(k){return SH[k].e+' '+SH[k].n;});
+  var allTitles=shiftTitles.concat(shiftTitlesEmoji);
+
+  L('// ╔══════════════════════════════════════════════════╗');
+  L('// ║  ShiftCal Calendar Cleanup — Scriptable Script  ║');
+  L('// ║  Deletes ALL ShiftCal events from ALL calendars ║');
+  L('// ║  including old cancelled events                 ║');
+  L('// ╚══════════════════════════════════════════════════╝');
+  L('// Generated: '+new Date().toLocaleDateString());
+  L('//');
+  L('// HOW TO USE:');
+  L('//   1. Paste into Scriptable → name it "ShiftCal Cleanup"');
+  L('//   2. Tap ▶ Run (just once — not an automation)');
+  L('//   3. Tap OK on the confirmation alert');
+  L('//   4. Go back to ShiftCal and re-export your .ics calendar');
+  L('');
+  L('// Calendars to search (all known ShiftCal calendar names)');
+  L('const CAL_NAMES = ["My Shift Schedule", "ShiftCal"];');
+  L('');
+  L('// Shift event titles to match (exact prefix match)');
+  L('const SHIFT_TITLES = '+JSON.stringify(allTitles)+';');
+  L('');
+  L('function isSCEvent(title) {');
+  L('  if (!title) return false;');
+  L('  return SHIFT_TITLES.some(t => title.startsWith(t) || title.includes("Shift"));');
+  L('}');
+  L('');
+  L('// Search range: 2 years back to 2 years ahead (catches all accumulated events)');
+  L('const rangeStart = new Date();');
+  L('rangeStart.setFullYear(rangeStart.getFullYear() - 2);');
+  L('const rangeEnd = new Date();');
+  L('rangeEnd.setFullYear(rangeEnd.getFullYear() + 2);');
+  L('');
+  L('let totalDeleted = 0;');
+  L('let calsSearched = 0;');
+  L('');
+  L('// Get all calendars (events only)');
+  L('const allCals = await Calendar.forEvents();');
+  L('');
+  L('for (const cal of allCals) {');
+  L('  // Only search ShiftCal calendars (by name) OR search all if names match');
+  L('  const isShiftCal = CAL_NAMES.includes(cal.title);');
+  L('  if (!isShiftCal) continue;');
+  L('  calsSearched++;');
+  L('  const events = await CalendarEvent.between(rangeStart, rangeEnd, [cal]);');
+  L('  for (const ev of events) {');
+  L('    await ev.remove();');
+  L('    totalDeleted++;');
+  L('  }');
+  L('}');
+  L('');
+  L('// Also search ALL calendars for ShiftCal-titled events (catches wrong-calendar imports)');
+  L('for (const cal of allCals) {');
+  L('  if (CAL_NAMES.includes(cal.title)) continue; // already done above');
+  L('  const events = await CalendarEvent.between(rangeStart, rangeEnd, [cal]);');
+  L('  for (const ev of events) {');
+  L('    if (isSCEvent(ev.title)) {');
+  L('      await ev.remove();');
+  L('      totalDeleted++;');
+  L('    }');
+  L('  }');
+  L('}');
+  L('');
+  L('// Also clean up ShiftCal Alarms reminders');
+  L('const remCals = await Calendar.forReminders();');
+  L('let remDeleted = 0;');
+  L('for (const rc of remCals) {');
+  L('  const rems = await Reminder.all([rc]);');
+  L('  if (!rems) continue;');
+  L('  for (const r of rems) {');
+  L('    if (isSCEvent(r.title)) {');
+  L('      await r.remove();');
+  L('      remDeleted++;');
+  L('    }');
+  L('  }');
+  L('}');
+  L('');
+  L('// Show result');
+  L('const alert = new Alert();');
+  L('alert.title = "ShiftCal Cleanup Done";');
+  L('alert.message = `Deleted ${totalDeleted} calendar event(s) and ${remDeleted} reminder(s).\\n\\nNow go back to ShiftCal and re-export your schedule.`;');
+  L('alert.addAction("OK");');
+  L('await alert.present();');
+  L('');
+  L('Script.complete();');
+
+  document.getElementById('scOut').textContent=lines.join('\n');
+}
+
 function genScript(){
   var len=ST.pat.length,cs=ST.cs;
   var rtEl=document.getElementById('scTime');
