@@ -123,6 +123,7 @@ input[type=time],input[type=number]{width:auto;}
   <div id="cnt">
     <div id="todayStrip"></div>
     <div id="syncBar"></div>
+    <div id="scSyncBar" style="display:none"></div>
     <div id="icsCalBar"></div>
     <div class="leg" id="leg"></div>
     <div class="wdr"><div class="wd">Sun</div><div class="wd">Mon</div><div class="wd">Tue</div><div class="wd">Wed</div><div class="wd">Thu</div><div class="wd">Fri</div><div class="wd">Sat</div></div>
@@ -360,7 +361,9 @@ input[type=time],input[type=number]{width:auto;}
       Exports your shift schedule as a <strong style="color:#E8E8F8">.ics calendar file</strong> with built-in alarm reminders at your configured times. Import once — re-export monthly.
     </div>
     <div id="icsStatus" style="background:var(--s2);border-radius:10px;padding:10px 13px;margin-bottom:10px;font-size:13px;color:var(--mu)">Checking last export…</div>
-    <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">Export range (from today)</div>
+    <button onclick="doScriptableSync()" style="display:block;width:100%;padding:13px 8px;border-radius:11px;border:none;background:#10B981;color:#000;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;text-align:center;margin-bottom:5px">&#9889; Sync via Scriptable</button>
+    <div style="font-size:11px;color:var(--mu);text-align:center;margin-bottom:12px">Copies data + opens Scriptable automatically — no duplicates ever</div>
+    <div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">Or export as .ics file (from today)</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
       <button onclick="doIcsExport(1)" style="padding:12px 8px;border-radius:11px;border:1px solid var(--bd);background:var(--s2);color:var(--tx);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;text-align:center">&#128197; 1 Month<div style="font-size:10px;font-weight:400;color:var(--mu);margin-top:3px">~30 shifts</div></button>
       <button onclick="doIcsExport(2)" style="padding:12px 8px;border-radius:11px;border:1px solid #818CF8;background:var(--night-bg);color:#818CF8;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;text-align:center">&#128197; 2 Months &#11088;<div style="font-size:10px;font-weight:400;color:#6060B0;margin-top:3px">Recommended</div></button>
@@ -422,15 +425,9 @@ input[type=time],input[type=number]{width:auto;}
       </div>
       <button id="scGenBtn" onclick="runScGen()" style="width:100%;margin-top:8px;padding:9px;border-radius:9px;border:none;background:linear-gradient(135deg,#6366F1,#10B981);color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">&#8635; Generate</button>
     </div>
-    <!-- Full Sync info panel -->
-    <div id="scFullInfo" style="background:#001810;border:1px solid #10B98140;border-radius:10px;padding:11px;margin-bottom:8px;font-size:12px;color:#10B981;line-height:1.8">
-      <strong style="color:#E8E8F8">&#9851; Full Sync — Replaces ALL calendar events instantly</strong><br/>
-      Run this in Scriptable <strong>whenever you change any shift</strong>. It deletes all old ShiftCal events and creates fresh ones for the next 3 months — no duplicates ever.<br/>
-      1. Install <strong>Scriptable</strong> from App Store (free)<br/>
-      2. Tap [+] &#8594; paste code below &#8594; name it <strong>ShiftCal Full Sync</strong><br/>
-      3. Tap &#9654; Run — done in seconds<br/>
-      <span style="color:#6090A0">Re-generate &amp; paste whenever shifts change &#8594; run again</span>
-    </div>
+    <!-- Full Sync info panel — content set dynamically by updateFullSyncInfo() -->
+    <div id="scFullInfo" style="background:#001810;border:1px solid #10B98140;border-radius:10px;padding:11px;margin-bottom:8px;font-size:12px;color:#10B981;line-height:1.8"></div>
+    <button id="scRunBtn" onclick="doScriptableSync()" style="display:block;width:100%;padding:13px;margin-bottom:8px;border-radius:10px;border:none;background:#10B981;color:#000;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:0.5px">&#9889; Sync Now</button>
     <!-- Scriptable info panel (hidden by default) -->
     <div id="scCodeInfo" style="display:none;background:#001014;border:1px solid #10B98140;border-radius:10px;padding:11px;margin-bottom:8px;font-size:12px;color:#10B981;line-height:1.8">
       <strong style="color:#E8E8F8">&#128187; Scriptable (free App Store app):</strong><br/>
@@ -532,7 +529,7 @@ function loadST(){
 
 function savST(){try{localStorage.setItem('sc_v9',JSON.stringify(ST));}catch(e){}}
 
-//  HELPERS 
+//  HELPERS
 // Use LOCAL date components to avoid UTC timezone shift (fixes date-1 bug)
 function dk(d){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -928,7 +925,7 @@ function applyOv(){
   }
   apR(from,to);
   if(repOn){var anc=new Date(from);var sp=to.getTime()-from.getTime();for(var i=1;i<reOc;i++){if(unit==='day')anc=aD(anc,reEv);else if(unit==='week')anc=aD(anc,reEv*7);else{anc=new Date(anc);anc.setMonth(anc.getMonth()+reEv);}apR(anc,new Date(anc.getTime()+sp));}}
-  savST();selDay=null;render();closeOv('dayOv');
+  savST();selDay=null;render();closeOv('dayOv');showScSyncBar();
   if(curTab==='ot')refreshOT();
 }
 function clearOv(){
@@ -936,7 +933,7 @@ function clearOv(){
   if(!fv||!tv)return;var from=pd(fv),to=pd(tv);
   var c2=new Date(from);
   while(c2<=to){var ds2=dk(c2);delete ST.ov[ds2];delete ST.hl[ds2];delete ST.nt[ds2];delete ST.manualOT[ds2];delete ST.ph[ds2];c2=aD(c2,1);}
-  savST();selDay=null;render();closeOv('dayOv');
+  savST();selDay=null;render();closeOv('dayOv');showScSyncBar();
 }
 
 //  PATTERN 
@@ -944,16 +941,16 @@ var ePat=[],eLen=12;
 function openPat(){ePat=[].concat(ST.pat);eLen=ePat.length;document.getElementById('cyLen').textContent=eLen;renderPD();document.getElementById('patOv').classList.add('op');}
 function stepCy(d){eLen=Math.max(1,Math.min(60,eLen+d));while(ePat.length<eLen)ePat.push('off');while(ePat.length>eLen)ePat.pop();document.getElementById('cyLen').textContent=eLen;renderPD();}
 function renderPD(){var c=document.getElementById('patDays');c.innerHTML='';ePat.forEach(function(k,i){var el=document.createElement('div');el.className='pdi';el.style.background=SBG[k]||'#111118';el.style.borderColor=SC[k]||'#4B5563';el.innerHTML='<div class="pdn" style="color:'+(SC[k]||'#4B5563')+'">'+(i+1)+'</div><div class="pde">'+(SH[k]?SH[k].e:'?')+'</div>';el.onclick=(function(idx){return function(){openPD(idx,'base');};})(i);c.appendChild(el);});}
-function savePat(){ST.pat=[].concat(ePat);savST();render();closeOv('patOv');}
+function savePat(){ST.pat=[].concat(ePat);savST();render();closeOv('patOv');showScSyncBar();}
 
 //  TEMP PERIOD 
 var tpEP=[],tpEL=4,tpEId=null;
 function openTpSh(id){tpEId=id;var ex=id?ST.tp.filter(function(t){return t.id===id;})[0]:null;document.getElementById('tpT').textContent=ex?'Edit Period':'New Period Pattern';document.getElementById('tpNm').value=ex?ex.nm:'';document.getElementById('tpSt').value=ex?ex.s:dk(new Date());document.getElementById('tpEn').value=ex?ex.e:'';tpEP=ex?[].concat(ex.p):['morning','morning','off','off'];tpEL=tpEP.length;document.getElementById('tcLen').textContent=tpEL;renderTPD();document.getElementById('tpOv').classList.add('op');}
 function stepTC(d){tpEL=Math.max(1,Math.min(60,tpEL+d));while(tpEP.length<tpEL)tpEP.push('off');while(tpEP.length>tpEL)tpEP.pop();document.getElementById('tcLen').textContent=tpEL;renderTPD();}
 function renderTPD(){var c=document.getElementById('tpPD');c.innerHTML='';tpEP.forEach(function(k,i){var el=document.createElement('div');el.className='pdi';el.style.background=SBG[k]||'#111118';el.style.borderColor=SC[k]||'#4B5563';el.innerHTML='<div class="pdn" style="color:'+(SC[k]||'#4B5563')+'">'+(i+1)+'</div><div class="pde">'+(SH[k]?SH[k].e:'?')+'</div>';el.onclick=(function(idx){return function(){openPD(idx,'tp');};})(i);c.appendChild(el);});}
-function saveTp(){var nm=document.getElementById('tpNm').value.trim()||'Period';var s=document.getElementById('tpSt').value,e=document.getElementById('tpEn').value;if(!s||!e){alert('Set dates.');return;}var entry={id:tpEId||String(Date.now()),nm:nm,s:s,e:e,p:[].concat(tpEP)};if(tpEId)ST.tp=ST.tp.map(function(t){return t.id===tpEId?entry:t;});else ST.tp.push(entry);savST();render();renderTpList();closeOv('tpOv');}
+function saveTp(){var nm=document.getElementById('tpNm').value.trim()||'Period';var s=document.getElementById('tpSt').value,e=document.getElementById('tpEn').value;if(!s||!e){alert('Set dates.');return;}var entry={id:tpEId||String(Date.now()),nm:nm,s:s,e:e,p:[].concat(tpEP)};if(tpEId)ST.tp=ST.tp.map(function(t){return t.id===tpEId?entry:t;});else ST.tp.push(entry);savST();render();renderTpList();closeOv('tpOv');showScSyncBar();}
 function renderTpList(){var c=document.getElementById('tpList');if(!c)return;if(!ST.tp.length){c.innerHTML='<div style="font-size:13px;color:var(--mu);padding:4px 0 8px">No temporary periods yet.</div>';return;}c.innerHTML=ST.tp.map(function(t){var pat=t.p.slice(0,10).map(function(k){return SH[k]?SH[k].e:'?';}).join('');var more=t.p.length>10?' +'+(t.p.length-10):'';return'<div class="tp"><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:14px;font-weight:700">'+t.nm+'</div><div style="display:flex;gap:4px"><button onclick="openTpSh(\''+t.id+'\')" style="background:none;border:none;color:var(--mu);font-size:15px;cursor:pointer;padding:4px">&#9998;</button><button onclick="delTp(\''+t.id+'\')" style="background:none;border:none;color:var(--sick);font-size:15px;cursor:pointer;padding:4px">&#10005;</button></div></div><div style="font-size:12px;color:var(--mu);margin-top:3px">'+t.s+' &rarr; '+t.e+' &middot; '+t.p.length+'-day cycle</div><div style="font-size:15px;margin-top:5px;letter-spacing:2px">'+pat+more+'</div></div>';}).join('');}
-function delTp(id){if(confirm('Delete?')){ST.tp=ST.tp.filter(function(t){return t.id!==id;});savST();render();renderTpList();}}
+function delTp(id){if(confirm('Delete?')){ST.tp=ST.tp.filter(function(t){return t.id!==id;});savST();render();renderTpList();showScSyncBar();}}
 
 //  PAT DAY PICKER 
 var pdI=null,pdC='base';
@@ -1447,6 +1444,7 @@ function setScMode(m){
   document.getElementById('scTabClean').style.background=isClean?'#EF4444':'none';
   document.getElementById('scTabClean').style.color=isClean?'#fff':'var(--mu)';
   document.getElementById('scFullInfo').style.display=isFull?'block':'none';
+  document.getElementById('scRunBtn').style.display=isFull?'block':'none';
   document.getElementById('scCodeInfo').style.display=isCode?'block':'none';
   document.getElementById('scStepsInfo').style.display=isSteps?'block':'none';
   document.getElementById('scCleanInfo').style.display=isClean?'block':'none';
@@ -1455,66 +1453,67 @@ function setScMode(m){
   runScGen();
 }
 function runScGen(){if(scMode==='fullsync')genFullSync();else if(scMode==='scriptable')genScriptable();else if(scMode==='cleanup')genCleanup();else genScript();}
-document.getElementById('syncRow').onclick=function(){setScMode('fullsync');document.getElementById('scOv').classList.add('op');};
+document.getElementById('syncRow').onclick=function(){updateFullSyncInfo();setScMode('fullsync');document.getElementById('scOv').classList.add('op');};
+
+function updateFullSyncInfo(){
+  var el=document.getElementById('scFullInfo');if(!el)return;
+  el.innerHTML='<strong style="color:#E8E8F8">&#9851; Full Sync — One tap, calendar updated instantly</strong><br/>'
+    +'Tap <strong>&#9889; Sync Now</strong> — copies schedule to clipboard and opens Scriptable automatically.<br/>'
+    +'<span style="color:#FBBF24">&#9888; First time only:</span> Install Scriptable &#8594; paste code below &#8594; name it <strong>ShiftCal Full Sync</strong>';
+}
 
 function genFullSync(){
   var months=3;
-  var today=new Date();today.setHours(0,0,0,0);
-  var endDate=new Date(today);endDate.setMonth(endDate.getMonth()+months);
-  // Pre-compute every shift day in range (includes overrides, temp periods, alarms)
-  var shifts={};
-  var cur=new Date(today);
-  while(cur<=endDate){
-    var ds=dk(cur);var sk=getShift(ds);var s=SH[sk];
-    if(s&&s.s){
-      shifts[ds]={n:s.n,e:s.e,s:s.s,f:s.f,nd:s.nd,a:alms(sk)};
-    }
-    cur=aD(cur,1);
-  }
-  var shiftsJS=JSON.stringify(shifts,null,2);
-  var endDs=dk(endDate);
   var lines=[];var L=function(v){lines.push(v);};
+
   L('// ╔════════════════════════════════════════════════════╗');
   L('// ║  ShiftCal Full Sync — Scriptable Script           ║');
-  L('// ║  Replaces ALL ShiftCal calendar events            ║');
-  L('// ║  ⚡ Re-generate & paste whenever shifts change    ║');
+  L('// ║  Paste ONCE — never needs updating again          ║');
+  L('// ║  ShiftCal sends fresh data via clipboard each run ║');
   L('// ╚════════════════════════════════════════════════════╝');
-  L('// Generated: '+new Date().toLocaleDateString()+' · Covers today → '+endDs);
   L('//');
-  L('// HOW TO USE:');
+  L('// FIRST TIME SETUP (one time only):');
   L('//   1. Install Scriptable from App Store (free)');
-  L('//   2. Tap [+] → paste this whole script → name it ShiftCal Full Sync');
-  L('//   3. Tap ▶ Run — wait for the "Done" alert (~10 sec)');
+  L('//   2. Tap [+] → paste this script → name it exactly: ShiftCal Full Sync');
+  L('//   3. Done — never paste again');
   L('//');
-  L('// AFTER CHANGING ANY SHIFT in ShiftCal:');
-  L('//   → Come back here → tap "Full Sync" tab → tap Copy → paste in Scriptable → Run');
+  L('// TO SYNC AFTER ANY SHIFT CHANGE:');
+  L('//   → Open ShiftCal → tap ⚡ Sync Now');
+  L('//   → ShiftCal copies data to clipboard and opens this script automatically');
   L('');
-  L('const CAL_NAME  = "ShiftCal";');
-  L('const REM_NAME  = "ShiftCal Alarms";');
-  L('const MONTHS    = '+months+';');
+  L('const CAL_NAME = "ShiftCal";');
+  L('const REM_NAME = "ShiftCal Alarms";');
+  L('const MONTHS   = '+months+';');
   L('');
-  L('// Pre-computed shifts (date → shift info + alarm times)');
-  L('const SHIFTS = '+shiftsJS+';');
+  L('// ── Read fresh shift data from clipboard (sent by ShiftCal) ──');
+  L('const raw = Pasteboard.paste();');
+  L('let SHIFTS;');
+  L('try {');
+  L('  SHIFTS = JSON.parse(raw);');
+  L('} catch(e) {');
+  L('  const ea = new Alert();');
+  L('  ea.title = "ShiftCal: No data in clipboard";');
+  L('  ea.message = "Open ShiftCal app and tap ⚡ Sync Now.";');
+  L('  ea.addAction("OK"); await ea.present(); return;');
+  L('}');
   L('');
-  L('// ── Find / create ShiftCal calendar ──────────────────');
+  L('// ── Find ShiftCal calendar ────────────────────────────');
   L('const allEvCals = await Calendar.forEvents();');
-  L('let cal = allEvCals.find(c => c.title === CAL_NAME);');
+  L('let cal = allEvCals.find(c => c.title === CAL_NAME)');
+  L('         || allEvCals.find(c => c.allowsContentModifications);');
   L('if (!cal) {');
-  L('  cal = new Calendar();');
-  L('  cal.title = CAL_NAME;');
-  L('  cal.color = Color.purple();');
-  L('  await cal.save();');
+  L('  let alert = new Alert();');
+  L('  alert.title = "No writable calendar found";');
+  L('  alert.message = "Open iPhone Calendar app → tap Calendars → Add Calendar → name it \\"ShiftCal\\", then run this script again.";');
+  L('  alert.addAction("OK");');
+  L('  await alert.present();');
+  L('  return;');
   L('}');
   L('');
-  L('// ── Find / create Reminders list for alarm sound ─────');
+  L('// ── Find Reminders list for alarm sound ──────────────');
   L('const allRemCals = await Calendar.forReminders();');
-  L('let remCal = allRemCals.find(c => c.title === REM_NAME);');
-  L('if (!remCal) {');
-  L('  remCal = new Calendar();');
-  L('  remCal.title = REM_NAME;');
-  L('  remCal.color = Color.green();');
-  L('  await remCal.save();');
-  L('}');
+  L('let remCal = allRemCals.find(c => c.title === REM_NAME)');
+  L('           || (allRemCals.length ? allRemCals[0] : null);');
   L('');
   L('// ── Delete existing ShiftCal events & reminders ──────');
   L('const today = new Date(); today.setHours(0, 0, 0, 0);');
@@ -1525,8 +1524,10 @@ function genFullSync(){
   L('const oldEvents = await CalendarEvent.between(today, endDate, [cal]);');
   L('for (const ev of oldEvents) await ev.remove();');
   L('');
-  L('const oldRems = await Reminder.allDueBetween(today, endDate, [remCal]);');
-  L('if (oldRems) for (const r of oldRems) await r.remove();');
+  L('if (remCal) {');
+  L('  const oldRems = await Reminder.allDueBetween(today, endDate, [remCal]);');
+  L('  if (oldRems) for (const r of oldRems) await r.remove();');
+  L('}');
   L('');
   L('// ── Recreate all events from pre-computed data ───────');
   L('let count = 0;');
@@ -1551,7 +1552,7 @@ function genFullSync(){
   L('  await ev.save();');
   L('');
   L('  // Create reminder(s) for alarm sound');
-  L('  for (const t of (info.a || [])) {');
+  L('  if (remCal) for (const t of (info.a || [])) {');
   L('    const [ah, am] = t.split(":").map(Number);');
   L('    const almDate  = new Date(date); almDate.setHours(ah, am, 0, 0);');
   L('    const rem      = new Reminder();');
@@ -1987,11 +1988,37 @@ function genScript(){
 
 function cpScript(){var t=document.getElementById('scOut').textContent;silentCopy(t);var b=document.getElementById('scCpBtn');b.textContent='\u2713 Copied!';setTimeout(function(){b.innerHTML='&#128203; Copy Script';},2000);}
 
+
+// -- SCRIPTABLE SYNC --
+function doScriptableSync(){
+  var months=3;
+  var today=new Date();today.setHours(0,0,0,0);
+  var endDate=new Date(today);endDate.setMonth(endDate.getMonth()+months);
+  var shifts={};
+  var cur=new Date(today);
+  while(cur<=endDate){
+    var ds=dk(cur);var sk=getShift(ds);var s=SH[sk];
+    if(s&&s.s){shifts[ds]={n:s.n,e:s.e,s:s.s,f:s.f,nd:s.nd,a:alms(sk)};}
+    cur=aD(cur,1);
+  }
+  silentCopy(JSON.stringify(shifts));
+  hideScSyncBar();
+  window.location.href='scriptable:///run?scriptName=ShiftCal%20Full%20Sync';
+}
+function showScSyncBar(){
+  var b=document.getElementById('scSyncBar');if(!b)return;
+  b.style.display='block';
+  b.innerHTML='<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;background:#001810;border-bottom:1px solid rgba(16,185,129,.5);cursor:pointer" onclick="doScriptableSync()"><div style="font-size:16px">&#9889;</div><div style="flex:1"><div style="font-size:12px;font-weight:700;color:#10B981">Shifts changed &#8212; tap to sync calendar</div><div style="font-size:11px;color:#10B981;opacity:.7;margin-top:1px">Opens Scriptable automatically</div></div><button onclick="event.stopPropagation();doScriptableSync()" style="background:#10B981;color:#000;border:none;border-radius:8px;padding:6px 13px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">Sync &#9654;</button><button onclick="event.stopPropagation();hideScSyncBar()" style="background:none;border:none;color:#10B981;font-size:16px;padding:4px 6px;cursor:pointer;opacity:.6">&#10005;</button></div>';
+}
+function hideScSyncBar(){
+  var b=document.getElementById('scSyncBar');if(b)b.style.display='none';
+}
 // ── BOOT ──────────────────────────────────────────────────────────────────────
 loadST();
 document.getElementById('yr').textContent=new Date().getFullYear();
 render();
 updateCalBar();
+updateFullSyncInfo();
 
 // If calendar was never exported or is stale, auto-open the sheet after 1.2s.
 // Showing a sheet doesn't need a user gesture — only the actual file download does.
