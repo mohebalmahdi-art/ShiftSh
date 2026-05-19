@@ -404,10 +404,11 @@ input[type=time],input[type=number]{width:auto;}
   <div class="shh"></div><div class="sht">&#9889; Auto-Alarm Setup</div>
   <div class="shs">
     <!-- Mode tabs -->
-    <div style="display:flex;gap:3px;background:var(--s2);border-radius:10px;padding:3px;margin-bottom:10px">
-      <button id="scTabSteps" onclick="setScMode('steps')" style="flex:1;padding:8px 4px;border-radius:8px;border:none;background:#818CF8;color:#fff;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer">&#128203; Shortcuts Steps</button>
-      <button id="scTabCode" onclick="setScMode('scriptable')" style="flex:1;padding:8px 4px;border-radius:8px;border:none;background:none;color:var(--mu);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer">&#128187; Scriptable Code</button>
-      <button id="scTabClean" onclick="setScMode('cleanup')" style="flex:1;padding:8px 4px;border-radius:8px;border:none;background:none;color:var(--mu);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer">&#128465; Cleanup</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;background:var(--s2);border-radius:10px;padding:3px;margin-bottom:10px">
+      <button id="scTabFull" onclick="setScMode('fullsync')" style="padding:8px 4px;border-radius:8px;border:none;background:#10B981;color:#000;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer">&#9851; Full Sync &#11088;</button>
+      <button id="scTabCode" onclick="setScMode('scriptable')" style="padding:8px 4px;border-radius:8px;border:none;background:none;color:var(--mu);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer">&#128187; Nightly Script</button>
+      <button id="scTabSteps" onclick="setScMode('steps')" style="padding:8px 4px;border-radius:8px;border:none;background:none;color:var(--mu);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer">&#128203; Shortcuts Steps</button>
+      <button id="scTabClean" onclick="setScMode('cleanup')" style="padding:8px 4px;border-radius:8px;border:none;background:none;color:var(--mu);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer">&#128465; Cleanup</button>
     </div>
     <!-- Shared settings (hidden in cleanup mode) -->
     <div id="scSharedSettings" style="background:var(--s2);border-radius:11px;padding:10px 12px;margin-bottom:10px">
@@ -420,6 +421,15 @@ input[type=time],input[type=number]{width:auto;}
         </div>
       </div>
       <button id="scGenBtn" onclick="runScGen()" style="width:100%;margin-top:8px;padding:9px;border-radius:9px;border:none;background:linear-gradient(135deg,#6366F1,#10B981);color:#fff;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">&#8635; Generate</button>
+    </div>
+    <!-- Full Sync info panel -->
+    <div id="scFullInfo" style="background:#001810;border:1px solid #10B98140;border-radius:10px;padding:11px;margin-bottom:8px;font-size:12px;color:#10B981;line-height:1.8">
+      <strong style="color:#E8E8F8">&#9851; Full Sync — Replaces ALL calendar events instantly</strong><br/>
+      Run this in Scriptable <strong>whenever you change any shift</strong>. It deletes all old ShiftCal events and creates fresh ones for the next 3 months — no duplicates ever.<br/>
+      1. Install <strong>Scriptable</strong> from App Store (free)<br/>
+      2. Tap [+] &#8594; paste code below &#8594; name it <strong>ShiftCal Full Sync</strong><br/>
+      3. Tap &#9654; Run — done in seconds<br/>
+      <span style="color:#6090A0">Re-generate &amp; paste whenever shifts change &#8594; run again</span>
     </div>
     <!-- Scriptable info panel (hidden by default) -->
     <div id="scCodeInfo" style="display:none;background:#001014;border:1px solid #10B98140;border-radius:10px;padding:11px;margin-bottom:8px;font-size:12px;color:#10B981;line-height:1.8">
@@ -1271,42 +1281,18 @@ function doIcsExport(months){
   if(!ST.icsSeq)ST.icsSeq=0;
   ST.icsSeq++;
   var seq=ST.icsSeq;
-  // prevData: what shift was exported for each date last time {dateKey: shiftKey}
-  var prevData=ST.icsData||{};
-  // newData starts as a copy of prevData (preserves tracking for dates outside this range)
-  var newData={};Object.keys(prevData).forEach(function(d){newData[d]=prevData[d];});
 
   var lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//ShiftCal//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH',
     'X-WR-CALNAME:ShiftCal','X-APPLE-CALENDAR-COLOR:#818CF8'];
   var today=new Date();today.setHours(0,0,0,0);
   var end=new Date(today);end.setMonth(end.getMonth()+months);
   var cur=new Date(today);
-  var count=0;var cancelCount=0;
+  var count=0;
   var typeCounts={};
   var stamp=new Date().toISOString().replace(/[-:.]/g,'').slice(0,15)+'Z';
 
   while(cur<end){
     var ds=dk(cur);var sk=getShift(ds);var s=SH[sk];
-
-    // If shift changed since last export, cancel the old calendar event first
-    var prevSk=prevData[ds];
-    if(prevSk && prevSk!==sk && SH[prevSk] && SH[prevSk].s){
-      var pS=SH[prevSk];var pp=ds.split('-');
-      var pDtS=pp[0]+pp[1]+pp[2]+'T'+pS.s.replace(':','')+'00';
-      var peDk=pS.nd?dk(aD(cur,1)):ds;var pep=peDk.split('-');
-      var pDtE=pep[0]+pep[1]+pep[2]+'T'+pS.f.replace(':','')+'00';
-      lines.push('BEGIN:VEVENT');
-      lines.push('UID:sc5-'+ds+'-'+prevSk+'@shiftcal');
-      lines.push('DTSTAMP:'+stamp);
-      lines.push('SEQUENCE:'+seq);
-      lines.push('DTSTART:'+pDtS);
-      lines.push('DTEND:'+pDtE);
-      lines.push(fold('SUMMARY:'+esc(pS.n+' Shift')));
-      lines.push('STATUS:CANCELLED');
-      lines.push('END:VEVENT');
-      cancelCount++;
-    }
-
     if(s&&s.s){
       var alm=alms(sk);var p=ds.split('-');
       var dtS=p[0]+p[1]+p[2]+'T'+s.s.replace(':','')+'00';
@@ -1314,7 +1300,7 @@ function doIcsExport(months){
       var dtE=ep2[0]+ep2[1]+ep2[2]+'T'+s.f.replace(':','')+'00';
       var nt=ST.nt[ds];
       lines.push('BEGIN:VEVENT');
-      lines.push('UID:sc5-'+ds+'-'+sk+'@shiftcal');
+      lines.push('UID:sc5-'+ds+'@shiftcal');
       lines.push('DTSTAMP:'+stamp);
       lines.push('SEQUENCE:'+seq);
       lines.push('DTSTART:'+dtS);
@@ -1336,7 +1322,6 @@ function doIcsExport(months){
       });
       lines.push('END:VEVENT');
       count++;typeCounts[sk]=(typeCounts[sk]||0)+1;
-      newData[ds]=sk;
     }
     cur=aD(cur,1);
   }
@@ -1350,11 +1335,10 @@ function doIcsExport(months){
   a.href='data:text/calendar;base64,'+b64;
   document.body.appendChild(a);a.click();document.body.removeChild(a);
 
-  ST.lastIcsExport=dk(today);ST.icsData=newData;savST();
+  ST.lastIcsExport=dk(today);savST();
   var breakdown=Object.keys(typeCounts).map(function(k){return SH[k].n+' x'+typeCounts[k];}).join(', ');
   var statusEl=document.getElementById('icsStatus');
-  var cancelNote=cancelCount>0?' — '+cancelCount+' changed shift'+(cancelCount>1?'s':'')+' updated':'';
-  if(statusEl)statusEl.innerHTML='<span style="color:#10B981">&#10003; '+count+' shifts exported ('+months+' month'+(months>1?'s':'')+')'+cancelNote+'<br><span style="font-size:11px;color:#10B981;opacity:.8">'+breakdown+'<br>Events go into "<strong>ShiftCal</strong>" calendar. If events look wrong, delete that calendar first then re-export.</span></span>';
+  if(statusEl)statusEl.innerHTML='<span style="color:#10B981">&#10003; '+count+' shifts exported ('+months+' month'+(months>1?'s':'')+')<br><span style="font-size:11px;color:#10B981;opacity:.8">'+breakdown+'<br>Tip: if a shift changed, use <strong>⚙️ Settings → Shortcuts → Full Sync</strong> to update calendar.</span></span>';
   updateExportRowSub();
   updateCalBar();
   return count;
@@ -1447,27 +1431,148 @@ function _legacyExport(){
 };
 
 // ── SHORTCUTS ─────────────────────────────────────────────────────────────────
-var scMode='steps';
+var scMode='fullsync';
 function setScMode(m){
   scMode=m;
+  var isFull=m==='fullsync';
   var isCode=m==='scriptable';
   var isClean=m==='cleanup';
   var isSteps=m==='steps';
+  document.getElementById('scTabFull').style.background=isFull?'#10B981':'none';
+  document.getElementById('scTabFull').style.color=isFull?'#000':'var(--mu)';
   document.getElementById('scTabSteps').style.background=isSteps?'#818CF8':'none';
   document.getElementById('scTabSteps').style.color=isSteps?'#fff':'var(--mu)';
-  document.getElementById('scTabCode').style.background=isCode?'#10B981':'none';
-  document.getElementById('scTabCode').style.color=isCode?'#000':'var(--mu)';
+  document.getElementById('scTabCode').style.background=isCode?'#818CF8':'none';
+  document.getElementById('scTabCode').style.color=isCode?'#fff':'var(--mu)';
   document.getElementById('scTabClean').style.background=isClean?'#EF4444':'none';
   document.getElementById('scTabClean').style.color=isClean?'#fff':'var(--mu)';
+  document.getElementById('scFullInfo').style.display=isFull?'block':'none';
   document.getElementById('scCodeInfo').style.display=isCode?'block':'none';
   document.getElementById('scStepsInfo').style.display=isSteps?'block':'none';
   document.getElementById('scCleanInfo').style.display=isClean?'block':'none';
-  document.getElementById('scSharedSettings').style.display=isClean?'none':'block';
-  document.getElementById('scOut').style.color=isClean?'#FF9090':isCode?'#A0FFC0':'#C0E0C0';
+  document.getElementById('scSharedSettings').style.display=(isClean||isFull)?'none':'block';
+  document.getElementById('scOut').style.color=isClean?'#FF9090':isFull?'#A0FFC0':'#C0E0C0';
   runScGen();
 }
-function runScGen(){if(scMode==='scriptable')genScriptable();else if(scMode==='cleanup')genCleanup();else genScript();}
-document.getElementById('syncRow').onclick=function(){genScript();document.getElementById('scOv').classList.add('op');};
+function runScGen(){if(scMode==='fullsync')genFullSync();else if(scMode==='scriptable')genScriptable();else if(scMode==='cleanup')genCleanup();else genScript();}
+document.getElementById('syncRow').onclick=function(){setScMode('fullsync');document.getElementById('scOv').classList.add('op');};
+
+function genFullSync(){
+  var months=3;
+  var today=new Date();today.setHours(0,0,0,0);
+  var endDate=new Date(today);endDate.setMonth(endDate.getMonth()+months);
+  // Pre-compute every shift day in range (includes overrides, temp periods, alarms)
+  var shifts={};
+  var cur=new Date(today);
+  while(cur<=endDate){
+    var ds=dk(cur);var sk=getShift(ds);var s=SH[sk];
+    if(s&&s.s){
+      shifts[ds]={n:s.n,e:s.e,s:s.s,f:s.f,nd:s.nd,a:alms(sk)};
+    }
+    cur=aD(cur,1);
+  }
+  var shiftsJS=JSON.stringify(shifts,null,2);
+  var endDs=dk(endDate);
+  var lines=[];var L=function(v){lines.push(v);};
+  L('// ╔════════════════════════════════════════════════════╗');
+  L('// ║  ShiftCal Full Sync — Scriptable Script           ║');
+  L('// ║  Replaces ALL ShiftCal calendar events            ║');
+  L('// ║  ⚡ Re-generate & paste whenever shifts change    ║');
+  L('// ╚════════════════════════════════════════════════════╝');
+  L('// Generated: '+new Date().toLocaleDateString()+' · Covers today → '+endDs);
+  L('//');
+  L('// HOW TO USE:');
+  L('//   1. Install Scriptable from App Store (free)');
+  L('//   2. Tap [+] → paste this whole script → name it ShiftCal Full Sync');
+  L('//   3. Tap ▶ Run — wait for the "Done" alert (~10 sec)');
+  L('//');
+  L('// AFTER CHANGING ANY SHIFT in ShiftCal:');
+  L('//   → Come back here → tap "Full Sync" tab → tap Copy → paste in Scriptable → Run');
+  L('');
+  L('const CAL_NAME  = "ShiftCal";');
+  L('const REM_NAME  = "ShiftCal Alarms";');
+  L('const MONTHS    = '+months+';');
+  L('');
+  L('// Pre-computed shifts (date → shift info + alarm times)');
+  L('const SHIFTS = '+shiftsJS+';');
+  L('');
+  L('// ── Find / create ShiftCal calendar ──────────────────');
+  L('const allEvCals = await Calendar.forEvents();');
+  L('let cal = allEvCals.find(c => c.title === CAL_NAME);');
+  L('if (!cal) {');
+  L('  cal = new Calendar();');
+  L('  cal.title = CAL_NAME;');
+  L('  cal.color = Color.purple();');
+  L('  await cal.save();');
+  L('}');
+  L('');
+  L('// ── Find / create Reminders list for alarm sound ─────');
+  L('const allRemCals = await Calendar.forReminders();');
+  L('let remCal = allRemCals.find(c => c.title === REM_NAME);');
+  L('if (!remCal) {');
+  L('  remCal = new Calendar();');
+  L('  remCal.title = REM_NAME;');
+  L('  remCal.color = Color.green();');
+  L('  await remCal.save();');
+  L('}');
+  L('');
+  L('// ── Delete existing ShiftCal events & reminders ──────');
+  L('const today = new Date(); today.setHours(0, 0, 0, 0);');
+  L('const endDate = new Date(today);');
+  L('endDate.setMonth(endDate.getMonth() + MONTHS);');
+  L('endDate.setHours(23, 59, 59, 999);');
+  L('');
+  L('const oldEvents = await CalendarEvent.between(today, endDate, [cal]);');
+  L('for (const ev of oldEvents) await ev.remove();');
+  L('');
+  L('const oldRems = await Reminder.allDueBetween(today, endDate, [remCal]);');
+  L('if (oldRems) for (const r of oldRems) await r.remove();');
+  L('');
+  L('// ── Recreate all events from pre-computed data ───────');
+  L('let count = 0;');
+  L('');
+  L('for (const [ds, info] of Object.entries(SHIFTS)) {');
+  L('  const parts = ds.split("-").map(Number);');
+  L('  const date  = new Date(parts[0], parts[1] - 1, parts[2]);');
+  L('  if (date < today) continue;');
+  L('');
+  L('  const [sh, sm] = info.s.split(":").map(Number);');
+  L('  const [fh, fm] = info.f.split(":").map(Number);');
+  L('  const evStart  = new Date(date); evStart.setHours(sh, sm, 0, 0);');
+  L('  const endDay   = info.nd ? new Date(date.getTime() + 86400000) : new Date(date);');
+  L('  const evEnd    = new Date(endDay); evEnd.setHours(fh, fm, 0, 0);');
+  L('');
+  L('  const ev    = new CalendarEvent();');
+  L('  ev.calendar = cal;');
+  L('  ev.title    = info.e + " " + info.n;');
+  L('  ev.startDate = evStart;');
+  L('  ev.endDate   = evEnd;');
+  L('  ev.notes     = "ShiftCal";');
+  L('  await ev.save();');
+  L('');
+  L('  // Create reminder(s) for alarm sound');
+  L('  for (const t of (info.a || [])) {');
+  L('    const [ah, am] = t.split(":").map(Number);');
+  L('    const almDate  = new Date(date); almDate.setHours(ah, am, 0, 0);');
+  L('    const rem      = new Reminder();');
+  L('    rem.calendar   = remCal;');
+  L('    rem.title      = info.e + " " + info.n + " — Wake up!";');
+  L('    rem.dueDate    = almDate;');
+  L('    rem.dueDateIncludesTime = true;');
+  L('    await rem.save();');
+  L('  }');
+  L('  count++;');
+  L('}');
+  L('');
+  L('// ── Show result ──────────────────────────────────────');
+  L('const a = new Alert();');
+  L('a.title   = "ShiftCal Full Sync ✓";');
+  L('a.message = `${count} events created for next ${MONTHS} months.\\n\\nAll old events replaced. Alarms set via Reminders.`;');
+  L('a.addAction("Done");');
+  L('await a.present();');
+  L('Script.complete();');
+  document.getElementById('scOut').textContent=lines.join('\n');
+}
 
 function genScriptable(){
   var cs=ST.cs;
