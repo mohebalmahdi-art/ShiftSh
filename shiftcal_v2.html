@@ -180,6 +180,10 @@ input[type=time],input[type=number]{width:auto;}
         Tap <strong>Step 1 — Install Script</strong> below, copy the code, paste it into Scriptable and name it <strong>ShiftCal</strong>, then tap <strong>&#10003; Script Ready</strong>.
       </div>
       <div class="sc2">
+        <div class="sr2" style="cursor:default">
+          <div><div class="sl2">Calendar Name</div><div class="ss2">Must match calendar in iPhone Calendar app</div></div>
+          <input type="text" id="calNameInput" placeholder="ShiftCal" onchange="saveCalName(this.value)" style="width:110px;text-align:right;padding:6px 8px;font-size:13px"/>
+        </div>
         <div class="sr2" id="syncRow" style="cursor:pointer"><div><div class="sl2"><span style="color:#818CF8;font-size:10px;font-weight:800;margin-right:4px">STEP 1</span>&#128187; Install Script</div><div class="ss2" id="syncRowSub">Copy code → paste into Scriptable → name it ShiftCal</div></div><span style="color:var(--mu)">&#8250;</span></div>
         <div class="sr2" style="cursor:pointer" onclick="confirmScriptReady()"><div><div class="sl2" style="color:#10B981">&#10003; Script Ready — tap after installing</div><div class="ss2">Confirms Scriptable script is installed</div></div><span style="color:var(--mu)">&#8250;</span></div>
         <div class="sr2" style="cursor:default;border-top:2px solid var(--bd)">
@@ -288,9 +292,11 @@ input[type=time],input[type=number]{width:auto;}
         <div class="stp"><button class="stb" onclick="stepOc(-1)">&#8722;</button><div class="stv" id="ocV">4</div><button class="stb" onclick="stepOc(1)">+</button></div>
       </div>
     </div>
-    <button class="btn bp" onclick="applyOv()">&#10003; Apply</button>
-    <button class="btn bs" onclick="clearOv()">&#10005; Clear Override for Range</button>
-    <button class="btn bs" onclick="closeOv('dayOv')" style="margin-top:4px">Cancel</button>
+    <div id="applyBtnArea">
+      <button class="btn bp" onclick="applyOv()">&#10003; Apply</button>
+      <button class="btn bs" onclick="clearOv()">&#10005; Clear Override for Range</button>
+      <button class="btn bs" onclick="closeOv('dayOv')" style="margin-top:4px">Cancel</button>
+    </div>
   </div>
 </div>
 </div>
@@ -508,7 +514,7 @@ var ST={
   ov:{},nt:{},hl:{},ph:{},manualOT:{},otHours:{},otCfgUser:{},tp:[],
   otCfg:JSON.parse(JSON.stringify(DEF_OT)),
   almCfg:JSON.parse(JSON.stringify(DEF_ALM)),
-  otRate:0.317,otCurr:'BHD',lastSync:null,icsSeq:0,icsData:{},syncMonths:2,scriptableReady:false,
+  otRate:0.317,otCurr:'BHD',lastSync:null,icsSeq:0,icsData:{},syncMonths:2,scriptableReady:false,calName:'ShiftCal',
 };
 function loadST(){
   try{
@@ -516,7 +522,7 @@ function loadST(){
     if(s){
       var p=JSON.parse(s);
       // Load safe fields only
-      var safeFields=['cs','pat','ov','nt','hl','ph','manualOT','otHours','tp','almCfg','otRate','otCurr','lastSync','otCfgUser','lastIcsExport','icsSeq','icsData','syncMonths','scriptableReady'];
+      var safeFields=['cs','pat','ov','nt','hl','ph','manualOT','otHours','tp','almCfg','otRate','otCurr','lastSync','otCfgUser','lastIcsExport','icsSeq','icsData','syncMonths','scriptableReady','calName'];
       safeFields.forEach(function(k){if(p[k]!==undefined)ST[k]=p[k];});
       if(!ST.almCfg)ST.almCfg=JSON.parse(JSON.stringify(DEF_ALM));
       if(!ST.ph)ST.ph={};
@@ -528,6 +534,7 @@ function loadST(){
       if(!ST.tp)ST.tp=[];
       if(!ST.syncMonths)ST.syncMonths=2;
       if(ST.scriptableReady===undefined)ST.scriptableReady=false;
+      if(!ST.calName)ST.calName='ShiftCal';
     }
   }catch(e){}
   // ALWAYS build otCfg fresh from DEF_OT + user overrides
@@ -855,6 +862,8 @@ function openDay(ds){
   updateOTRow(editSk);
   repOn=false;document.getElementById('repTg').classList.remove('on');document.getElementById('repOpts').style.display='none';
   document.getElementById('reV').textContent='1';document.getElementById('ocV').textContent='4';
+  var ba=document.getElementById('applyBtnArea');
+  if(ba)ba.innerHTML='<button class="btn bp" onclick="applyOv()">&#10003; Apply</button><button class="btn bs" onclick="clearOv()">&#10005; Clear Override for Range</button><button class="btn bs" onclick="closeOv(\'dayOv\')" style="margin-top:4px">Cancel</button>';
   document.getElementById('dayOv').classList.add('op');
 }
 
@@ -941,8 +950,12 @@ function applyOv(){
   }
   apR(from,to);
   if(repOn){var anc=new Date(from);var sp=to.getTime()-from.getTime();for(var i=1;i<reOc;i++){if(unit==='day')anc=aD(anc,reEv);else if(unit==='week')anc=aD(anc,reEv*7);else{anc=new Date(anc);anc.setMonth(anc.getMonth()+reEv);}apR(anc,new Date(anc.getTime()+sp));}}
-  savST();selDay=null;render();closeOv('dayOv');showScSyncBar();
+  savST();selDay=null;render();
   if(curTab==='ot')refreshOT();
+  var ba=document.getElementById('applyBtnArea');
+  if(ba)ba.innerHTML='<div style="text-align:center;font-size:12px;color:#10B981;font-weight:600;padding:6px 0">Saved ✓ — sync to calendar?</div>'
+    +'<button class="btn" style="background:#10B981;color:#000;margin-bottom:5px" onclick="doScriptableSync();closeOv(\'dayOv\')">&#9889; Sync to Calendar Now</button>'
+    +'<button class="btn bs" onclick="closeOv(\'dayOv\');showScSyncBar()">&#10003; Save Only</button>';
 }
 function clearOv(){
   var fv=document.getElementById('rFrom').value,tv=document.getElementById('rTo').value;
@@ -1013,8 +1026,10 @@ function loadSettings(){
   var sym=document.getElementById('currSym');if(sym)sym.textContent=getCurrSym(cur);
   document.getElementById('yr').textContent=new Date().getFullYear();
   renderOTCfg();renderAlmCfg();renderTpList();updateExportRowSub();renderSyncMonthBtns();
+  var cn=document.getElementById('calNameInput');if(cn)cn.value=ST.calName||'ShiftCal';
 }
 function savCS(v){ST.cs=v;savST();render();}
+function saveCalName(v){ST.calName=v.trim()||'ShiftCal';savST();}
 function savRate(){ST.otRate=parseFloat(document.getElementById('otRate').value)||0.317;savST();}
 function savCurr(){var v=document.getElementById('otCurr').value;ST.otCurr=v;var sym=document.getElementById('currSym');if(sym)sym.textContent=getCurrSym(v);savST();}
 
@@ -1156,7 +1171,7 @@ function setAlmC(sk,n){if(!ST.almCfg[sk])ST.almCfg[sk]={c:1,b:'05:00',g:5};ST.al
 function setAlmB(sk,v){if(!ST.almCfg[sk])ST.almCfg[sk]={c:1,b:v,g:5};ST.almCfg[sk].b=v;savST();renderAlmCfg();render();}
 function setAlmG(sk,v){if(!ST.almCfg[sk])ST.almCfg[sk]={c:1,b:'05:00',g:5};ST.almCfg[sk].g=Math.max(1,parseInt(v)||5);savST();renderAlmCfg();render();}
 function resetOv(){if(confirm('Clear all overrides, notes, highlights?')){ST.ov={};ST.hl={};ST.nt={};ST.ph={};ST.manualOT={};ST.otHours={};savST();render();}}
-function resetAll(){if(confirm('Full reset?')){ST={cs:'2026-05-10',pat:['morning','morning','morning','night','night','night','off','off','afternoon','afternoon','afternoon','off'],ov:{},nt:{},hl:{},ph:{},manualOT:{},otHours:{},otCfgUser:{},tp:[],otCfg:JSON.parse(JSON.stringify(DEF_OT)),otCfgUser:{},almCfg:JSON.parse(JSON.stringify(DEF_ALM)),otRate:0.317,otCurr:'BHD',lastSync:null,lastIcsExport:null,icsSeq:0,icsData:{},syncMonths:2,scriptableReady:false};savST();render();}}
+function resetAll(){if(confirm('Full reset?')){ST={cs:'2026-05-10',pat:['morning','morning','morning','night','night','night','off','off','afternoon','afternoon','afternoon','off'],ov:{},nt:{},hl:{},ph:{},manualOT:{},otHours:{},otCfgUser:{},tp:[],otCfg:JSON.parse(JSON.stringify(DEF_OT)),otCfgUser:{},almCfg:JSON.parse(JSON.stringify(DEF_ALM)),otRate:0.317,otCurr:'BHD',lastSync:null,lastIcsExport:null,icsSeq:0,icsData:{},syncMonths:2,scriptableReady:false,calName:'ShiftCal'};savST();render();}}
 
 // ── OT PAGE ───────────────────────────────────────────────────────────────────
 function renderOTPage(){
@@ -1502,7 +1517,6 @@ function genFullSync(){
   L('');
   L('await (async function() {');
   L('');
-  L('const CAL_NAME = "ShiftCal";');
   L('const REM_NAME = "ShiftCal Alarms";');
   L('');
   L('// Read operation from clipboard');
@@ -1518,6 +1532,9 @@ function genFullSync(){
   L('  await a.present();');
   L('  Script.complete(); return;');
   L('}');
+  L('');
+  L('// Calendar name from ShiftCal app settings (sent via clipboard)');
+  L('const CAL_NAME = data.calName || "ShiftCal";');
   L('');
   L('// Find ShiftCal calendar (never uses new Calendar() — fixed)');
   L('const allEvCals = await Calendar.forEvents();');
@@ -1579,17 +1596,18 @@ function genFullSync(){
   L('endDate.setMonth(endDate.getMonth() + months);');
   L('endDate.setHours(23, 59, 59, 999);');
   L('');
-  L('// Delete existing ShiftCal events & alarms for the sync period');
-  L('// Search all calendars so we catch events from any previous calendar');
+  L('// Clear ALL future ShiftCal events (not just sync period)');
+  L('// This fixes switching from 3-month to 1-month — old events get removed too');
+  L('const clearFuture = new Date(today); clearFuture.setFullYear(clearFuture.getFullYear() + 2); clearFuture.setHours(23,59,59,999);');
   L('for (const c of allEvCals) {');
-  L('  const oldEvs = await CalendarEvent.between(today, endDate, [c]);');
+  L('  const oldEvs = await CalendarEvent.between(today, clearFuture, [c]);');
   L('  for (const ev of oldEvs) {');
   L('    if (c.title === CAL_NAME || ev.notes === "ShiftCal") await ev.remove();');
   L('  }');
   L('}');
-  L('// Only delete from the dedicated ShiftCal Alarms list — never touch user reminders');
+  L('// Only clear the dedicated ShiftCal Alarms list — never touch user reminders');
   L('if (remCal) {');
-  L('  const oldRems = await Reminder.allDueBetween(today, endDate, [remCal]);');
+  L('  const oldRems = await Reminder.allDueBetween(today, clearFuture, [remCal]);');
   L('  if (oldRems) for (const r of oldRems) await r.remove();');
   L('}');
   L('');
@@ -1622,6 +1640,7 @@ function genFullSync(){
   L('    rem.title      = info.e + " " + info.n + " — Alarm";');
   L('    rem.dueDate    = almDate;');
   L('    rem.dueDateIncludesTime = true;');
+  L('    rem.priority   = 1;');
   L('    await rem.save();');
   L('  }');
   L('  count++;');
@@ -1787,6 +1806,7 @@ function genScriptable(){
   L('    rem.title     = `${sh.e} ${sh.n} — Wake up!`;');
   L('    rem.dueDate   = almDate;');
   L('    rem.dueDateIncludesTime = true;');
+  L('    rem.priority  = 1;');
   L('    await rem.save();');
   L('  }');
   L('  if (times.length) msg += `\\nAlarm(s): ${times.join(", ")}`;');
@@ -2066,12 +2086,12 @@ function doScriptableSync(){
     if(s&&s.s){shifts[ds]={n:s.n,e:s.e,s:s.s,f:s.f,nd:s.nd,a:alms(sk)};}
     cur=aD(cur,1);
   }
-  silentCopy(JSON.stringify({mode:'sync',months:months,shifts:shifts}));
+  silentCopy(JSON.stringify({mode:'sync',calName:ST.calName||'ShiftCal',months:months,shifts:shifts}));
   hideScSyncBar();
   window.location.href='scriptable:///run?scriptName=ShiftCal';
 }
 function doClearCalendar(){
-  silentCopy(JSON.stringify({mode:'clear'}));
+  silentCopy(JSON.stringify({mode:'clear',calName:ST.calName||'ShiftCal'}));
   window.location.href='scriptable:///run?scriptName=ShiftCal';
 }
 function saveSyncMonths(n){
