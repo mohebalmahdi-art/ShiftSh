@@ -487,7 +487,7 @@ var ST={
   ov:{},nt:{},hl:{},ph:{},manualOT:{},otHours:{},otCfgUser:{},tp:[],
   otCfg:JSON.parse(JSON.stringify(DEF_OT)),
   almCfg:JSON.parse(JSON.stringify(DEF_ALM)),
-  otRate:0.317,otCurr:'BHD',lastSync:null,icsSeq:0,
+  otRate:0.317,otCurr:'BHD',lastSync:null,icsSeq:0,icsData:{},
 };
 function loadST(){
   try{
@@ -495,7 +495,7 @@ function loadST(){
     if(s){
       var p=JSON.parse(s);
       // Load safe fields only
-      var safeFields=['cs','pat','ov','nt','hl','ph','manualOT','otHours','tp','almCfg','otRate','otCurr','lastSync','otCfgUser','lastIcsExport','icsSeq'];
+      var safeFields=['cs','pat','ov','nt','hl','ph','manualOT','otHours','tp','almCfg','otRate','otCurr','lastSync','otCfgUser','lastIcsExport','icsSeq','icsData'];
       safeFields.forEach(function(k){if(p[k]!==undefined)ST[k]=p[k];});
       if(!ST.almCfg)ST.almCfg=JSON.parse(JSON.stringify(DEF_ALM));
       if(!ST.ph)ST.ph={};
@@ -1133,7 +1133,7 @@ function setAlmC(sk,n){if(!ST.almCfg[sk])ST.almCfg[sk]={c:1,b:'05:00',g:5};ST.al
 function setAlmB(sk,v){if(!ST.almCfg[sk])ST.almCfg[sk]={c:1,b:v,g:5};ST.almCfg[sk].b=v;savST();renderAlmCfg();render();}
 function setAlmG(sk,v){if(!ST.almCfg[sk])ST.almCfg[sk]={c:1,b:'05:00',g:5};ST.almCfg[sk].g=Math.max(1,parseInt(v)||5);savST();renderAlmCfg();render();}
 function resetOv(){if(confirm('Clear all overrides, notes, highlights?')){ST.ov={};ST.hl={};ST.nt={};ST.ph={};ST.manualOT={};ST.otHours={};savST();render();}}
-function resetAll(){if(confirm('Full reset?')){ST={cs:'2026-05-10',pat:['morning','morning','morning','night','night','night','off','off','afternoon','afternoon','afternoon','off'],ov:{},nt:{},hl:{},ph:{},manualOT:{},otHours:{},otCfgUser:{},tp:[],otCfg:JSON.parse(JSON.stringify(DEF_OT)),otCfgUser:{},almCfg:JSON.parse(JSON.stringify(DEF_ALM)),otRate:0.317,otCurr:'BHD',lastSync:null,lastIcsExport:null,icsSeq:0};savST();render();}}
+function resetAll(){if(confirm('Full reset?')){ST={cs:'2026-05-10',pat:['morning','morning','morning','night','night','night','off','off','afternoon','afternoon','afternoon','off'],ov:{},nt:{},hl:{},ph:{},manualOT:{},otHours:{},otCfgUser:{},tp:[],otCfg:JSON.parse(JSON.stringify(DEF_OT)),otCfgUser:{},almCfg:JSON.parse(JSON.stringify(DEF_ALM)),otRate:0.317,otCurr:'BHD',lastSync:null,lastIcsExport:null,icsSeq:0,icsData:{}};savST();render();}}
 
 // ── OT PAGE ───────────────────────────────────────────────────────────────────
 function renderOTPage(){
@@ -1271,18 +1271,42 @@ function doIcsExport(months){
   if(!ST.icsSeq)ST.icsSeq=0;
   ST.icsSeq++;
   var seq=ST.icsSeq;
+  // prevData: what shift was exported for each date last time {dateKey: shiftKey}
+  var prevData=ST.icsData||{};
+  // newData starts as a copy of prevData (preserves tracking for dates outside this range)
+  var newData={};Object.keys(prevData).forEach(function(d){newData[d]=prevData[d];});
 
   var lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//ShiftCal//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH',
     'X-WR-CALNAME:ShiftCal','X-APPLE-CALENDAR-COLOR:#818CF8'];
   var today=new Date();today.setHours(0,0,0,0);
   var end=new Date(today);end.setMonth(end.getMonth()+months);
   var cur=new Date(today);
-  var count=0;
+  var count=0;var cancelCount=0;
   var typeCounts={};
   var stamp=new Date().toISOString().replace(/[-:.]/g,'').slice(0,15)+'Z';
 
   while(cur<end){
     var ds=dk(cur);var sk=getShift(ds);var s=SH[sk];
+
+    // If shift changed since last export, cancel the old calendar event first
+    var prevSk=prevData[ds];
+    if(prevSk && prevSk!==sk && SH[prevSk] && SH[prevSk].s){
+      var pS=SH[prevSk];var pp=ds.split('-');
+      var pDtS=pp[0]+pp[1]+pp[2]+'T'+pS.s.replace(':','')+'00';
+      var peDk=pS.nd?dk(aD(cur,1)):ds;var pep=peDk.split('-');
+      var pDtE=pep[0]+pep[1]+pep[2]+'T'+pS.f.replace(':','')+'00';
+      lines.push('BEGIN:VEVENT');
+      lines.push('UID:sc5-'+ds+'-'+prevSk+'@shiftcal');
+      lines.push('DTSTAMP:'+stamp);
+      lines.push('SEQUENCE:'+seq);
+      lines.push('DTSTART:'+pDtS);
+      lines.push('DTEND:'+pDtE);
+      lines.push(fold('SUMMARY:'+esc(pS.n+' Shift')));
+      lines.push('STATUS:CANCELLED');
+      lines.push('END:VEVENT');
+      cancelCount++;
+    }
+
     if(s&&s.s){
       var alm=alms(sk);var p=ds.split('-');
       var dtS=p[0]+p[1]+p[2]+'T'+s.s.replace(':','')+'00';
@@ -1290,7 +1314,7 @@ function doIcsExport(months){
       var dtE=ep2[0]+ep2[1]+ep2[2]+'T'+s.f.replace(':','')+'00';
       var nt=ST.nt[ds];
       lines.push('BEGIN:VEVENT');
-      lines.push('UID:sc5-'+ds+'@shiftcal');
+      lines.push('UID:sc5-'+ds+'-'+sk+'@shiftcal');
       lines.push('DTSTAMP:'+stamp);
       lines.push('SEQUENCE:'+seq);
       lines.push('DTSTART:'+dtS);
@@ -1312,6 +1336,7 @@ function doIcsExport(months){
       });
       lines.push('END:VEVENT');
       count++;typeCounts[sk]=(typeCounts[sk]||0)+1;
+      newData[ds]=sk;
     }
     cur=aD(cur,1);
   }
@@ -1325,10 +1350,11 @@ function doIcsExport(months){
   a.href='data:text/calendar;base64,'+b64;
   document.body.appendChild(a);a.click();document.body.removeChild(a);
 
-  ST.lastIcsExport=dk(today);savST();
+  ST.lastIcsExport=dk(today);ST.icsData=newData;savST();
   var breakdown=Object.keys(typeCounts).map(function(k){return SH[k].n+' x'+typeCounts[k];}).join(', ');
   var statusEl=document.getElementById('icsStatus');
-  if(statusEl)statusEl.innerHTML='<span style="color:#10B981">&#10003; '+count+' shifts exported ('+months+' month'+(months>1?'s':'')+')<br><span style="font-size:11px;color:#10B981;opacity:.8">'+breakdown+'<br>Events go into "<strong>ShiftCal</strong>" calendar. If events look wrong, delete that calendar first then re-export.</span></span>';
+  var cancelNote=cancelCount>0?' — '+cancelCount+' changed shift'+(cancelCount>1?'s':'')+' updated':'';
+  if(statusEl)statusEl.innerHTML='<span style="color:#10B981">&#10003; '+count+' shifts exported ('+months+' month'+(months>1?'s':'')+')'+cancelNote+'<br><span style="font-size:11px;color:#10B981;opacity:.8">'+breakdown+'<br>Events go into "<strong>ShiftCal</strong>" calendar. If events look wrong, delete that calendar first then re-export.</span></span>';
   updateExportRowSub();
   updateCalBar();
   return count;
