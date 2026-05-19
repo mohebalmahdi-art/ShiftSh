@@ -1286,7 +1286,7 @@ function doIcsExport(months){
       var dtE=ep2[0]+ep2[1]+ep2[2]+'T'+s.f.replace(':','')+'00';
       var nt=ST.nt[ds];
       lines.push('BEGIN:VEVENT');
-      lines.push('UID:sc5-'+ds+'-'+sk+'@shiftcal');
+      lines.push('UID:sc5-'+ds+'@shiftcal');
       lines.push('DTSTAMP:'+stamp);
       lines.push('SEQUENCE:0');
       lines.push('DTSTART:'+dtS);
