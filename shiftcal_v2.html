@@ -487,7 +487,7 @@ var ST={
   ov:{},nt:{},hl:{},ph:{},manualOT:{},otHours:{},otCfgUser:{},tp:[],
   otCfg:JSON.parse(JSON.stringify(DEF_OT)),
   almCfg:JSON.parse(JSON.stringify(DEF_ALM)),
-  otRate:0.317,otCurr:'BHD',lastSync:null,
+  otRate:0.317,otCurr:'BHD',lastSync:null,icsSeq:0,
 };
 function loadST(){
   try{
@@ -495,7 +495,7 @@ function loadST(){
     if(s){
       var p=JSON.parse(s);
       // Load safe fields only
-      var safeFields=['cs','pat','ov','nt','hl','ph','manualOT','otHours','tp','almCfg','otRate','otCurr','lastSync','otCfgUser','lastIcsExport'];
+      var safeFields=['cs','pat','ov','nt','hl','ph','manualOT','otHours','tp','almCfg','otRate','otCurr','lastSync','otCfgUser','lastIcsExport','icsSeq'];
       safeFields.forEach(function(k){if(p[k]!==undefined)ST[k]=p[k];});
       if(!ST.almCfg)ST.almCfg=JSON.parse(JSON.stringify(DEF_ALM));
       if(!ST.ph)ST.ph={};
@@ -1133,7 +1133,7 @@ function setAlmC(sk,n){if(!ST.almCfg[sk])ST.almCfg[sk]={c:1,b:'05:00',g:5};ST.al
 function setAlmB(sk,v){if(!ST.almCfg[sk])ST.almCfg[sk]={c:1,b:v,g:5};ST.almCfg[sk].b=v;savST();renderAlmCfg();render();}
 function setAlmG(sk,v){if(!ST.almCfg[sk])ST.almCfg[sk]={c:1,b:'05:00',g:5};ST.almCfg[sk].g=Math.max(1,parseInt(v)||5);savST();renderAlmCfg();render();}
 function resetOv(){if(confirm('Clear all overrides, notes, highlights?')){ST.ov={};ST.hl={};ST.nt={};ST.ph={};ST.manualOT={};ST.otHours={};savST();render();}}
-function resetAll(){if(confirm('Full reset?')){ST={cs:'2026-05-10',pat:['morning','morning','morning','night','night','night','off','off','afternoon','afternoon','afternoon','off'],ov:{},nt:{},hl:{},ph:{},manualOT:{},otHours:{},otCfgUser:{},tp:[],otCfg:JSON.parse(JSON.stringify(DEF_OT)),otCfgUser:{},almCfg:JSON.parse(JSON.stringify(DEF_ALM)),otRate:0.317,otCurr:'BHD',lastSync:null,lastIcsExport:null};savST();render();}}
+function resetAll(){if(confirm('Full reset?')){ST={cs:'2026-05-10',pat:['morning','morning','morning','night','night','night','off','off','afternoon','afternoon','afternoon','off'],ov:{},nt:{},hl:{},ph:{},manualOT:{},otHours:{},otCfgUser:{},tp:[],otCfg:JSON.parse(JSON.stringify(DEF_OT)),otCfgUser:{},almCfg:JSON.parse(JSON.stringify(DEF_ALM)),otRate:0.317,otCurr:'BHD',lastSync:null,lastIcsExport:null,icsSeq:0};savST();render();}}
 
 // ── OT PAGE ───────────────────────────────────────────────────────────────────
 function renderOTPage(){
@@ -1268,6 +1268,10 @@ function doIcsExport(months){
     return o;
   }
 
+  if(!ST.icsSeq)ST.icsSeq=0;
+  ST.icsSeq++;
+  var seq=ST.icsSeq;
+
   var lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//ShiftCal//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH',
     'X-WR-CALNAME:ShiftCal','X-APPLE-CALENDAR-COLOR:#818CF8'];
   var today=new Date();today.setHours(0,0,0,0);
@@ -1288,7 +1292,7 @@ function doIcsExport(months){
       lines.push('BEGIN:VEVENT');
       lines.push('UID:sc5-'+ds+'@shiftcal');
       lines.push('DTSTAMP:'+stamp);
-      lines.push('SEQUENCE:0');
+      lines.push('SEQUENCE:'+seq);
       lines.push('DTSTART:'+dtS);
       lines.push('DTEND:'+dtE);
       lines.push(fold('SUMMARY:'+esc(s.n+' Shift')));
