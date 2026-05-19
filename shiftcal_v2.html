@@ -176,8 +176,10 @@ input[type=time],input[type=number]{width:auto;}
       <div id="almCfgSec"></div>
       <div class="sct">Calendar &amp; Sync</div>
       <div id="scNotReady" style="display:none;background:#1A0606;border:1px solid #EF444460;border-radius:12px;padding:12px;margin-bottom:8px;font-size:12px;color:#D0C0C0;line-height:1.8">
-        <strong style="color:#E8E8F8">&#9888;&#65039; Script not installed yet</strong><br/>
-        Tap <strong>Step 1 — Install Script</strong> below, copy the code, paste it into Scriptable and name it <strong>ShiftCal</strong>, then tap <strong>&#10003; Script Ready</strong>.
+        <strong style="color:#E8E8F8">&#9888;&#65039; Setup not complete yet</strong><br/>
+        <strong>Step 1:</strong> Tap Install Script → copy → paste into Scriptable → name it <strong>ShiftCal</strong><br/>
+        <strong>Step 2:</strong> Shortcuts app → + → Run Script (Scriptable) → ShiftCal → turn OFF "Ask Before Running" → name it <strong>ShiftCal</strong><br/>
+        Then tap <strong>&#10003; Script Ready</strong>.
       </div>
       <div class="sc2">
         <div class="sr2" style="cursor:default">
@@ -185,9 +187,10 @@ input[type=time],input[type=number]{width:auto;}
           <input type="text" id="calNameInput" placeholder="ShiftCal" onchange="saveCalName(this.value)" style="width:110px;text-align:right;padding:6px 8px;font-size:13px"/>
         </div>
         <div class="sr2" id="syncRow" style="cursor:pointer"><div><div class="sl2"><span style="color:#818CF8;font-size:10px;font-weight:800;margin-right:4px">STEP 1</span>&#128187; Install Script</div><div class="ss2" id="syncRowSub">Copy code → paste into Scriptable → name it ShiftCal</div></div><span style="color:var(--mu)">&#8250;</span></div>
-        <div class="sr2" style="cursor:pointer" onclick="confirmScriptReady()"><div><div class="sl2" style="color:#10B981">&#10003; Script Ready — tap after installing</div><div class="ss2">Confirms Scriptable script is installed</div></div><span style="color:var(--mu)">&#8250;</span></div>
+        <div class="sr2" style="cursor:default"><div><div class="sl2"><span style="color:#818CF8;font-size:10px;font-weight:800;margin-right:4px">STEP 2</span>&#128279; Create Shortcut (no more dialogs)</div><div class="ss2">Shortcuts app → + → search Scriptable → Run Script → ShiftCal → turn OFF "Ask Before Running" → name it ShiftCal</div></div></div>
+        <div class="sr2" style="cursor:pointer" onclick="confirmScriptReady()"><div><div class="sl2" style="color:#10B981">&#10003; Script Ready — tap after installing</div><div class="ss2">Confirms Scriptable + Shortcut are set up</div></div><span style="color:var(--mu)">&#8250;</span></div>
         <div class="sr2" style="cursor:default;border-top:2px solid var(--bd)">
-          <div><div class="sl2"><span style="color:#10B981;font-size:10px;font-weight:800;margin-right:4px">STEP 2</span>Sync Period</div><div class="ss2">Months to sync to calendar</div></div>
+          <div><div class="sl2"><span style="color:#10B981;font-size:10px;font-weight:800;margin-right:4px">STEP 3</span>Sync Period</div><div class="ss2">Months to sync to calendar</div></div>
           <div style="display:flex;gap:5px" id="syncMonthBtns">
             <button onclick="saveSyncMonths(1)" id="smBtn1" style="padding:5px 12px;border-radius:7px;border:1px solid var(--bd);background:var(--s1);color:var(--tx);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">1M</button>
             <button onclick="saveSyncMonths(2)" id="smBtn2" style="padding:5px 12px;border-radius:7px;border:1px solid var(--bd);background:var(--s1);color:var(--tx);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">2M</button>
@@ -1506,14 +1509,18 @@ function genFullSync(){
   L('//');
   L('// FIRST TIME SETUP (one time only):');
   L('//   1. Install Scriptable from App Store (free)');
-  L('//   2. Open Scriptable → tap [+] → paste this script');
-  L('//   3. Name it exactly:  ShiftCal');
-  L('//   4. Done — never paste again');
+  L('//   2. Open Scriptable → tap [+] → paste this script → name it:  ShiftCal');
+  L('//   3. Open Shortcuts app → tap [+] → search "Scriptable"');
+  L('//      → "Run Script" → choose ShiftCal → turn OFF "Ask Before Running" → Done');
+  L('//      → Name the shortcut exactly:  ShiftCal');
+  L('//   4. Done — no more permission dialogs');
   L('//');
   L('// USAGE (from ShiftCal app):');
-  L('//   ⚡ Sync via Scriptable  → copies schedule + opens this script');
-  L('//   🗑️ Clear Calendar       → copies clear command + opens this script');
+  L('//   ⚡ Sync via Scriptable  → copies schedule → opens ShiftCal shortcut → runs script');
+  L('//   🗑️ Clear Calendar       → copies clear command → opens shortcut → runs script');
   L('//   Script reads clipboard to know what to do — fully automatic');
+  L('//');
+  L('// WHY SHORTCUTS BRIDGE: Prevents "Open in Scriptable?" dialog on every tap.');
   L('');
   L('await (async function() {');
   L('');
@@ -1550,9 +1557,9 @@ function genFullSync(){
   L('  Script.complete(); return;');
   L('}');
   L('');
+  L('// Auto-create "ShiftCal Alarms" Reminders list if it does not exist');
   L('const allRemCals = await Calendar.forReminders();');
-  L('// IMPORTANT: never fall back to allRemCals[0] — that would delete user reminders!');
-  L('const remCal = allRemCals.find(c => c.title === REM_NAME) || null;');
+  L('const remCal = await Calendar.findOrCreate(REM_NAME);');
   L('');
   L('const today = new Date(); today.setHours(0, 0, 0, 0);');
   L('');
@@ -1567,23 +1574,31 @@ function genFullSync(){
   L('  for (const c of allEvCals) {');
   L('    const evs = await CalendarEvent.between(from, to, [c]);');
   L('    for (const ev of evs) {');
-  L('      // Only remove events created by ShiftCal (marked in notes)');
   L('      if (c.title === CAL_NAME || ev.notes === "ShiftCal") {');
   L('        await ev.remove(); evDel++;');
   L('      }');
   L('    }');
   L('  }');
   L('');
-  L('  // Only touch the dedicated ShiftCal Alarms list — never the default Reminders');
+  L('  // Delete only ShiftCal-tagged reminders from ALL reminder calendars');
   L('  let remDel = 0;');
-  L('  if (remCal) {');
-  L('    const rems = await Reminder.allDueBetween(from, to, [remCal]);');
-  L('    if (rems) for (const r of rems) { await r.remove(); remDel++; }');
+  L('  for (const rc of allRemCals) {');
+  L('    const rems = await Reminder.allDueBetween(from, to, [rc]);');
+  L('    if (rems) for (const r of rems) {');
+  L('      if (r.notes === "ShiftCal") { await r.remove(); remDel++; }');
+  L('    }');
+  L('  }');
+  L('');
+  L('  // Cancel pending ShiftCal alarm notifications');
+  L('  const pending = await Notification.allPending();');
+  L('  let notifDel = 0;');
+  L('  for (const n of pending) {');
+  L('    if (n.identifier && n.identifier.startsWith("shiftcal_")) { n.remove(); notifDel++; }');
   L('  }');
   L('');
   L('  const a = new Alert();');
   L('  a.title = "ShiftCal Cleared ✓";');
-  L('  a.message = `${evDel} events + ${remDel} alarms removed.\\nYour personal reminders were not touched.`;');
+  L('  a.message = `${evDel} events, ${remDel} reminders, ${notifDel} alarms removed.\\nYour personal reminders were not touched.`;');
   L('  a.addAction("Done");');
   L('  await a.present();');
   L('  Script.complete(); return;');
@@ -1596,8 +1611,7 @@ function genFullSync(){
   L('endDate.setMonth(endDate.getMonth() + months);');
   L('endDate.setHours(23, 59, 59, 999);');
   L('');
-  L('// Clear ALL future ShiftCal events (not just sync period)');
-  L('// This fixes switching from 3-month to 1-month — old events get removed too');
+  L('// Clear ALL future ShiftCal events (2-year window fixes month-count switching)');
   L('const clearFuture = new Date(today); clearFuture.setFullYear(clearFuture.getFullYear() + 2); clearFuture.setHours(23,59,59,999);');
   L('for (const c of allEvCals) {');
   L('  const oldEvs = await CalendarEvent.between(today, clearFuture, [c]);');
@@ -1605,10 +1619,17 @@ function genFullSync(){
   L('    if (c.title === CAL_NAME || ev.notes === "ShiftCal") await ev.remove();');
   L('  }');
   L('}');
-  L('// Only clear the dedicated ShiftCal Alarms list — never touch user reminders');
-  L('if (remCal) {');
-  L('  const oldRems = await Reminder.allDueBetween(today, clearFuture, [remCal]);');
-  L('  if (oldRems) for (const r of oldRems) await r.remove();');
+  L('// Delete only ShiftCal-tagged reminders from ALL reminder calendars');
+  L('for (const rc of allRemCals) {');
+  L('  const oldRems = await Reminder.allDueBetween(today, clearFuture, [rc]);');
+  L('  if (oldRems) for (const r of oldRems) {');
+  L('    if (r.notes === "ShiftCal") await r.remove();');
+  L('  }');
+  L('}');
+  L('// Cancel pending ShiftCal alarm notifications');
+  L('const pendingNotifs = await Notification.allPending();');
+  L('for (const n of pendingNotifs) {');
+  L('  if (n.identifier && n.identifier.startsWith("shiftcal_")) n.remove();');
   L('}');
   L('');
   L('// Recreate events + alarms from ShiftCal data');
@@ -1632,23 +1653,36 @@ function genFullSync(){
   L('  ev.notes     = "ShiftCal";');
   L('  await ev.save();');
   L('');
-  L('  if (remCal) for (const t of (info.a || [])) {');
+  L('  for (const t of (info.a || [])) {');
   L('    const [ah, am] = t.split(":").map(Number);');
   L('    const almDate  = new Date(date); almDate.setHours(ah, am, 0, 0);');
+  L('    if (almDate <= new Date()) continue; // skip past alarms');
+  L('');
+  L('    // Reminder — visible in Reminders app, urgent priority');
   L('    const rem      = new Reminder();');
   L('    rem.calendar   = remCal;');
   L('    rem.title      = info.e + " " + info.n + " — Alarm";');
+  L('    rem.notes      = "ShiftCal";');
   L('    rem.dueDate    = almDate;');
   L('    rem.dueDateIncludesTime = true;');
   L('    rem.priority   = 1;');
   L('    await rem.save();');
+  L('');
+  L('    // Notification — fires as alarm sound directly from Scriptable');
+  L('    const notif       = new Notification();');
+  L('    notif.identifier  = "shiftcal_" + ds + "_" + ah + "_" + am;');
+  L('    notif.title       = info.e + " " + info.n + " Shift";');
+  L('    notif.body        = "Shift starts at " + info.s + " — tap to open ShiftCal";');
+  L('    notif.sound       = "default";');
+  L('    notif.setTriggerDate(almDate);');
+  L('    await notif.schedule();');
   L('  }');
   L('  count++;');
   L('}');
   L('');
   L('const a = new Alert();');
   L('a.title   = "ShiftCal Synced ✓";');
-  L('a.message = `${count} shifts created for ${months} month${months > 1 ? "s" : ""}.\\nCalendar updated — alarms set via Reminders.`;');
+  L('a.message = `${count} shifts synced for ${months} month${months > 1 ? "s" : ""}.\\nCalendar events + Reminders + Alarm notifications all set.`;');
   L('a.addAction("Done");');
   L('await a.present();');
   L('');
@@ -1770,14 +1804,22 @@ function genScriptable(){
   L('const oldEvents = await CalendarEvent.between(dayStart, dayEnd, [cal]);');
   L('for (const ev of oldEvents) await ev.remove();');
   L('');
-  L('// ── Reminders (alarm sound) ──────────────────────────────');
-  L('// Calendar.findOrCreate IS valid for Reminder calendars');
+  L('// ── Reminders + Alarm notifications ─────────────────────');
+  L('// Auto-create reminders list; never touch user personal reminders');
   L('const remCals   = await Calendar.forReminders();');
-  L('// Never fall back to remCals[0] — that would delete user reminders!');
-  L('const remCal    = remCals.find(c => c.title === REM_CAL) || null;');
-  L('if (remCal) {');
-  L('  const oldRems = await Reminder.allDueBetween(dayStart, dayEnd, [remCal]);');
-  L('  if (oldRems) for (const r of oldRems) { await r.remove(); }');
+  L('const remCal    = await Calendar.findOrCreate(REM_CAL);');
+  L('// Delete only ShiftCal-tagged reminders from ALL reminder calendars for this day');
+  L('for (const rc of remCals) {');
+  L('  const oldRems = await Reminder.allDueBetween(dayStart, dayEnd, [rc]);');
+  L('  if (oldRems) for (const r of oldRems) {');
+  L('    if (r.notes === "ShiftCal") await r.remove();');
+  L('  }');
+  L('}');
+  L('// Cancel any existing ShiftCal notifications for this day');
+  L('const pendingN = await Notification.allPending();');
+  L('const dayStr   = target.toISOString().slice(0, 10).replace(/-/g, "-");');
+  L('for (const n of pendingN) {');
+  L('  if (n.identifier && n.identifier.startsWith("shiftcal_" + dayStr)) n.remove();');
   L('}');
   L('');
   L('let msg = `${target.toDateString()}: ${sh.e} ${sh.n}`;');
@@ -1795,19 +1837,30 @@ function genScriptable(){
   L('  await ev.save();');
   L('  msg += `\\nShift: ${sh.s} – ${sh.f}`;');
   L('');
-  L('  // Create reminder(s) for alarm sound');
+  L('  // Create reminder(s) + alarm notifications');
   L('  const times = almTimes(sk);');
   L('  for (const t of times) {');
   L('    const [h, m] = t.split(":").map(Number);');
   L('    const almDate = new Date(target);');
   L('    almDate.setHours(h, m, 0, 0);');
+  L('    if (almDate <= new Date()) continue;');
+  L('    // Reminder — visible in Reminders app');
   L('    const rem     = new Reminder();');
-  L('    if (remCal) rem.calendar = remCal;');
+  L('    rem.calendar  = remCal;');
   L('    rem.title     = `${sh.e} ${sh.n} — Wake up!`;');
+  L('    rem.notes     = "ShiftCal";');
   L('    rem.dueDate   = almDate;');
   L('    rem.dueDateIncludesTime = true;');
   L('    rem.priority  = 1;');
   L('    await rem.save();');
+  L('    // Notification — fires as alarm sound from Scriptable');
+  L('    const notif      = new Notification();');
+  L('    notif.identifier = `shiftcal_${dayStr}_${h}_${m}`;');
+  L('    notif.title      = `${sh.e} ${sh.n} Shift`;');
+  L('    notif.body       = `Shift starts at ${sh.s} — wake up!`;');
+  L('    notif.sound      = "default";');
+  L('    notif.setTriggerDate(almDate);');
+  L('    await notif.schedule();');
   L('  }');
   L('  if (times.length) msg += `\\nAlarm(s): ${times.join(", ")}`;');
   L('} else {');
@@ -2088,11 +2141,11 @@ function doScriptableSync(){
   }
   silentCopy(JSON.stringify({mode:'sync',calName:ST.calName||'ShiftCal',months:months,shifts:shifts}));
   hideScSyncBar();
-  window.location.href='scriptable:///run?scriptName=ShiftCal';
+  window.location.href='shortcuts://run-shortcut?name=ShiftCal';
 }
 function doClearCalendar(){
   silentCopy(JSON.stringify({mode:'clear',calName:ST.calName||'ShiftCal'}));
-  window.location.href='scriptable:///run?scriptName=ShiftCal';
+  window.location.href='shortcuts://run-shortcut?name=ShiftCal';
 }
 function saveSyncMonths(n){
   ST.syncMonths=n;savST();renderSyncMonthBtns();
