@@ -175,9 +175,15 @@ input[type=time],input[type=number]{width:auto;}
       <div class="sct">Alarms per Shift</div>
       <div id="almCfgSec"></div>
       <div class="sct">Calendar &amp; Sync</div>
+      <div id="scNotReady" style="display:none;background:#1A0606;border:1px solid #EF444460;border-radius:12px;padding:12px;margin-bottom:8px;font-size:12px;color:#D0C0C0;line-height:1.8">
+        <strong style="color:#E8E8F8">&#9888;&#65039; Script not installed yet</strong><br/>
+        Tap <strong>Step 1 — Install Script</strong> below, copy the code, paste it into Scriptable and name it <strong>ShiftCal</strong>, then tap <strong>&#10003; Script Ready</strong>.
+      </div>
       <div class="sc2">
-        <div class="sr2" style="cursor:default">
-          <div><div class="sl2">Sync Period</div><div class="ss2">Months of calendar to sync</div></div>
+        <div class="sr2" id="syncRow" style="cursor:pointer"><div><div class="sl2"><span style="color:#818CF8;font-size:10px;font-weight:800;margin-right:4px">STEP 1</span>&#128187; Install Script</div><div class="ss2" id="syncRowSub">Copy code → paste into Scriptable → name it ShiftCal</div></div><span style="color:var(--mu)">&#8250;</span></div>
+        <div class="sr2" style="cursor:pointer" onclick="confirmScriptReady()"><div><div class="sl2" style="color:#10B981">&#10003; Script Ready — tap after installing</div><div class="ss2">Confirms Scriptable script is installed</div></div><span style="color:var(--mu)">&#8250;</span></div>
+        <div class="sr2" style="cursor:default;border-top:2px solid var(--bd)">
+          <div><div class="sl2"><span style="color:#10B981;font-size:10px;font-weight:800;margin-right:4px">STEP 2</span>Sync Period</div><div class="ss2">Months to sync to calendar</div></div>
           <div style="display:flex;gap:5px" id="syncMonthBtns">
             <button onclick="saveSyncMonths(1)" id="smBtn1" style="padding:5px 12px;border-radius:7px;border:1px solid var(--bd);background:var(--s1);color:var(--tx);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">1M</button>
             <button onclick="saveSyncMonths(2)" id="smBtn2" style="padding:5px 12px;border-radius:7px;border:1px solid var(--bd);background:var(--s1);color:var(--tx);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">2M</button>
@@ -186,7 +192,6 @@ input[type=time],input[type=number]{width:auto;}
         </div>
         <div class="sr2" style="cursor:pointer" onclick="doScriptableSync()"><div><div class="sl2">&#9889; Sync via Scriptable</div><div class="ss2">Copy schedule + open Scriptable to update calendar</div></div><span style="color:var(--mu)">&#8250;</span></div>
         <div class="sr2" style="cursor:pointer" onclick="doClearCalendar()"><div><div class="sl2" style="color:var(--sick)">&#128465; Clear Calendar</div><div class="ss2">Remove all ShiftCal events &amp; alarms from iPhone</div></div><span style="color:var(--mu)">&#8250;</span></div>
-        <div class="sr2" id="syncRow" style="cursor:pointer"><div><div class="sl2">&#128187; Script Setup</div><div class="ss2">Get Scriptable script (paste once, first time only)</div></div><span style="color:var(--mu)">&#8250;</span></div>
         <div class="sr2" id="exportRow" style="cursor:pointer"><div><div class="sl2">&#128197; Export .ics</div><div class="ss2" id="exportRowSub">Alternative: file-based calendar import</div></div><span style="color:var(--mu)">&#8250;</span></div>
       </div>
       <div class="sct">Temporary Period Patterns</div>
@@ -503,7 +508,7 @@ var ST={
   ov:{},nt:{},hl:{},ph:{},manualOT:{},otHours:{},otCfgUser:{},tp:[],
   otCfg:JSON.parse(JSON.stringify(DEF_OT)),
   almCfg:JSON.parse(JSON.stringify(DEF_ALM)),
-  otRate:0.317,otCurr:'BHD',lastSync:null,icsSeq:0,icsData:{},syncMonths:2,
+  otRate:0.317,otCurr:'BHD',lastSync:null,icsSeq:0,icsData:{},syncMonths:2,scriptableReady:false,
 };
 function loadST(){
   try{
@@ -511,7 +516,7 @@ function loadST(){
     if(s){
       var p=JSON.parse(s);
       // Load safe fields only
-      var safeFields=['cs','pat','ov','nt','hl','ph','manualOT','otHours','tp','almCfg','otRate','otCurr','lastSync','otCfgUser','lastIcsExport','icsSeq','icsData','syncMonths'];
+      var safeFields=['cs','pat','ov','nt','hl','ph','manualOT','otHours','tp','almCfg','otRate','otCurr','lastSync','otCfgUser','lastIcsExport','icsSeq','icsData','syncMonths','scriptableReady'];
       safeFields.forEach(function(k){if(p[k]!==undefined)ST[k]=p[k];});
       if(!ST.almCfg)ST.almCfg=JSON.parse(JSON.stringify(DEF_ALM));
       if(!ST.ph)ST.ph={};
@@ -522,6 +527,7 @@ function loadST(){
       if(!ST.otCfgUser)ST.otCfgUser={};
       if(!ST.tp)ST.tp=[];
       if(!ST.syncMonths)ST.syncMonths=2;
+      if(ST.scriptableReady===undefined)ST.scriptableReady=false;
     }
   }catch(e){}
   // ALWAYS build otCfg fresh from DEF_OT + user overrides
@@ -1150,7 +1156,7 @@ function setAlmC(sk,n){if(!ST.almCfg[sk])ST.almCfg[sk]={c:1,b:'05:00',g:5};ST.al
 function setAlmB(sk,v){if(!ST.almCfg[sk])ST.almCfg[sk]={c:1,b:v,g:5};ST.almCfg[sk].b=v;savST();renderAlmCfg();render();}
 function setAlmG(sk,v){if(!ST.almCfg[sk])ST.almCfg[sk]={c:1,b:'05:00',g:5};ST.almCfg[sk].g=Math.max(1,parseInt(v)||5);savST();renderAlmCfg();render();}
 function resetOv(){if(confirm('Clear all overrides, notes, highlights?')){ST.ov={};ST.hl={};ST.nt={};ST.ph={};ST.manualOT={};ST.otHours={};savST();render();}}
-function resetAll(){if(confirm('Full reset?')){ST={cs:'2026-05-10',pat:['morning','morning','morning','night','night','night','off','off','afternoon','afternoon','afternoon','off'],ov:{},nt:{},hl:{},ph:{},manualOT:{},otHours:{},otCfgUser:{},tp:[],otCfg:JSON.parse(JSON.stringify(DEF_OT)),otCfgUser:{},almCfg:JSON.parse(JSON.stringify(DEF_ALM)),otRate:0.317,otCurr:'BHD',lastSync:null,lastIcsExport:null,icsSeq:0,icsData:{},syncMonths:2};savST();render();}}
+function resetAll(){if(confirm('Full reset?')){ST={cs:'2026-05-10',pat:['morning','morning','morning','night','night','night','off','off','afternoon','afternoon','afternoon','off'],ov:{},nt:{},hl:{},ph:{},manualOT:{},otHours:{},otCfgUser:{},tp:[],otCfg:JSON.parse(JSON.stringify(DEF_OT)),otCfgUser:{},almCfg:JSON.parse(JSON.stringify(DEF_ALM)),otRate:0.317,otCurr:'BHD',lastSync:null,lastIcsExport:null,icsSeq:0,icsData:{},syncMonths:2,scriptableReady:false};savST();render();}}
 
 // ── OT PAGE ───────────────────────────────────────────────────────────────────
 function renderOTPage(){
@@ -2054,6 +2060,12 @@ function doClearCalendar(){
 function saveSyncMonths(n){
   ST.syncMonths=n;savST();renderSyncMonthBtns();
 }
+function confirmScriptReady(){
+  ST.scriptableReady=true;savST();
+  var banner=document.getElementById('scNotReady');if(banner)banner.style.display='none';
+  var sub=document.getElementById('syncRowSub');if(sub)sub.textContent='Script installed ✓';
+  renderSyncMonthBtns();
+}
 function renderSyncMonthBtns(){
   var m=ST.syncMonths||2;
   [1,2,3].forEach(function(n){
@@ -2063,6 +2075,8 @@ function renderSyncMonthBtns(){
     b.style.color=on?'#000':'var(--tx)';
     b.style.borderColor=on?'#10B981':'var(--bd)';
   });
+  var banner=document.getElementById('scNotReady');
+  if(banner)banner.style.display=ST.scriptableReady?'none':'block';
 }
 function showScSyncBar(){
   var b=document.getElementById('scSyncBar');if(!b)return;
