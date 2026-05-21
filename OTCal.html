@@ -416,7 +416,12 @@ function isOT(ds){
 
 function computeDay(ds){
   var sk=getShift(ds);var sh=SH[sk];
-  if(!sh||!sh.s)return{segs:[],otH:0,otPay:0,normalH:0,phPay:0,isPH:false};
+  // Special rule: Off/rest day marked as Public Holiday → 8h × 1.0 OT compensation
+  if((!sh||!sh.s)&&!!ST.ph[ds]){
+    var rate=parseFloat(ST.otRate)||0.317;
+    return{segs:[{h:8,r:1.0,label:'PH-Off'}],otH:8,otPay:8*rate,normalH:0,phPay:0,isPH:false,isPhOff:true};
+  }
+  if(!sh||!sh.s)return{segs:[],otH:0,otPay:0,normalH:0,phPay:0,isPH:false,isPhOff:false};
   var rate=parseFloat(ST.otRate)||0.317;
   var isPH=!!ST.ph[ds];
   var offDuty=isOT(ds);
@@ -443,7 +448,7 @@ function computeDay(ds){
     });
     if(segs.length===0){segs=[{h:shiftH,r:1.0,label:''}];normalH=shiftH;}
   }
-  return{segs:segs,otH:otH,otPay:otPay,normalH:normalH,phPay:phPay,isPH:isPH};
+  return{segs:segs,otH:otH,otPay:otPay,normalH:normalH,phPay:phPay,isPH:isPH,isPhOff:false};
 }
 
 function calcOT(fromDs,toDs){
@@ -453,15 +458,20 @@ function calcOT(fromDs,toDs){
   var cur=new Date(from);
   while(cur<=to){
     var ds=dk(cur);var sk=getShift(ds);var sh=SH[sk];
-    if(sh&&sh.s){
-      var r=computeDay(ds);
+    var r=computeDay(ds);
+    if(r.isPhOff){
+      // Off/rest day + PH toggle → 8h × 1.0 compensation, counted in OT bucket
+      totalH+=8;otH+=8;otPay+=r.otPay;
+      days.push({ds:ds,sk:sk,sh:SH[sk]||SH.off,segs:r.segs,dayH:8,dayOtH:8,dayOtPay:r.otPay,
+        normalH:0,isOT:true,isPH:false,isPhOff:true,phPay:0,base:getBase(ds)});
+    } else if(sh&&sh.s){
       var dayH=ST.otHours&&ST.otHours[ds]&&isOT(ds)&&(!SH[getBase(ds)]||!SH[getBase(ds)].s)
         ?parseFloat(ST.otHours[ds]):sh.h;
       totalH+=dayH;
       if(r.isPH){phH+=dayH;phPay+=r.phPay;}
       else{otH+=r.otH;otPay+=r.otPay;}
       days.push({ds:ds,sk:sk,sh:sh,segs:r.segs,dayH:dayH,dayOtH:r.otH,dayOtPay:r.otPay,
-        normalH:r.normalH,isOT:isOT(ds),isPH:r.isPH,phPay:r.phPay,base:getBase(ds)});
+        normalH:r.normalH,isOT:isOT(ds),isPH:r.isPH,isPhOff:false,phPay:r.phPay,base:getBase(ds)});
     }
     cur=aD(cur,1);
   }
@@ -492,11 +502,13 @@ function mkCell(date,other,tds){
   var col=SC[sk]||'#4B5563';var bg=SBG[sk]||'#111118';
   var isToday=ds===tds;var hasNote=!!ST.nt[ds];var hl=ST.hl[ds]||'';
   var otDay=isOT(ds);var isPHday=!!ST.ph[ds];
+  // Off rest-day with PH toggle → also shows $ OT marker
+  var isPhOffDay=isPHday&&(!SH[sk]||!SH[sk].s);
   var isTp=!ST.ov[ds]&&ST.tp.some(function(t){return pd(ds)>=pd(t.s)&&pd(ds)<=pd(t.e);});
   var cell=document.createElement('div');
   var cls='cd';
   if(other)cls+=' xo';if(isToday)cls+=' tod';if(hasNote)cls+=' hn';
-  if(otDay)cls+=' ot';if(isPHday)cls+=' ph-day';
+  if(otDay||isPhOffDay)cls+=' ot';if(isPHday)cls+=' ph-day';
   if(hl==='y')cls+=' hy';else if(hl==='r')cls+=' hr2';else if(hl==='g')cls+=' hg';else if(hl==='b')cls+=' hb';
   cell.className=cls;
   if(!hl)cell.style.background=bg;
@@ -851,7 +863,7 @@ function refreshOT(){
       otDays.forEach(function(d){
         var sh=SH[d.sk]||SH.off;var col=SC[d.sk]||'#4B5563';var date=pd(d.ds);
         var baseSh=SH[d.base];
-        var reason=(!baseSh||!baseSh.s)?('Off duty: '+d.dayH+'h'):d.dayOtH.toFixed(1)+'h OT';
+        var reason=d.isPhOff?'PH on rest day: 8h × 1.0 (compensation)':(!baseSh||!baseSh.s)?('Off→Duty: '+d.dayH+'h × 1.5'):d.dayOtH.toFixed(1)+'h OT';
         html+='<div style="padding:11px 14px;border-bottom:1px solid var(--bd)">';
         html+='<div style="display:flex;align-items:center;gap:10px">';
         html+='<div style="font-size:20px">'+sh.e+'</div>';
