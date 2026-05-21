@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="ShiftOT"/>
+<meta name="theme-color" content="#0A0A12"/>
+<title>ShiftOT</title>
+<style>
+:root{
+  --bg:#0A0A12;--s1:#12121E;--s2:#1A1A28;--bd:#222232;
+  --tx:#E8E8F8;--mu:#5A5A80;
+  --morning:#F59E0B;--morning-bg:#1E1400;
+  --lmorning:#FBBF24;--lmorning-bg:#241A00;
+  --afternoon:#10B981;--afternoon-bg:#001810;
+  --night:#818CF8;--night-bg:#0D0A2A;
+  --lnight:#A78BFA;--lnight-bg:#130A30;
+  --off:#4B5563;--off-bg:#111118;
+  --sick:#EF4444;--sick-bg:#1A0606;
+  --leave:#06B6D4;--leave-bg:#001820;
+  --training:#A855F7;--training-bg:#180A28;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%;}
+html,body{height:100%;width:100%;position:fixed;overflow:hidden;background:#0A0A12;color:#E8E8F8;font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;}
+#app{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--bg);padding-top:max(env(safe-area-inset-top),20px);}
+#hdr{flex-shrink:0;padding:8px 14px 6px;background:var(--bg);}
+#cnt{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;}
+#nav{flex-shrink:0;display:flex;background:var(--s1);border-top:1px solid var(--bd);padding-bottom:max(env(safe-area-inset-bottom),8px);}
+.ntb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 2px;background:none;border:none;color:var(--mu);font-family:inherit;font-size:10px;font-weight:600;cursor:pointer;}
+.ntb.on{color:#818CF8;}
+.ntb .ni{font-size:20px;}
+.hr{display:flex;align-items:center;justify-content:space-between;}
+.mnv{display:flex;align-items:center;gap:10px;}
+.mb{width:32px;height:32px;border-radius:50%;border:1px solid var(--bd);background:var(--s1);color:var(--tx);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.mt{font-size:19px;font-weight:700;}
+.ib{width:34px;height:34px;border-radius:10px;border:1px solid var(--bd);background:var(--s1);color:var(--tx);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.wdr{display:grid;grid-template-columns:repeat(7,1fr);padding:2px 8px 0;}
+.wd{text-align:center;font-size:9px;font-weight:700;color:var(--mu);padding:3px 0;text-transform:uppercase;}
+.cgr{display:grid;grid-template-columns:repeat(7,1fr);padding:2px 8px 6px;gap:2px;}
+.cd{border-radius:9px;padding:3px 1px 4px;display:flex;flex-direction:column;align-items:center;gap:1px;min-height:52px;border:2px solid transparent;position:relative;cursor:pointer;}
+.cd:active{transform:scale(.95);}
+.cd.xo{opacity:.2;pointer-events:none;}
+.cd.tod .dn{background:var(--tx);color:var(--bg);border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-weight:800;}
+.cd.hn{border-color:currentColor;}
+.cd.ot::before{content:'$';position:absolute;top:2px;right:3px;font-size:7px;font-weight:700;color:#FBBF24;}
+.cd.ph-day{box-shadow:inset 0 0 0 2px rgba(6,182,212,.5);}
+.cd.hy{background:rgba(251,191,36,.18)!important;}
+.cd.hr2{background:rgba(239,68,68,.18)!important;}
+.cd.hg{background:rgba(16,185,129,.18)!important;}
+.cd.hb{background:rgba(129,140,248,.18)!important;}
+.dn{font-size:12px;font-weight:600;width:20px;height:20px;display:flex;align-items:center;justify-content:center;}
+.de{font-size:12px;line-height:1;}
+.ts{margin:6px 12px;padding:12px 14px;border-radius:14px;display:flex;align-items:center;gap:12px;cursor:pointer;}
+.leg{display:flex;flex-wrap:wrap;gap:6px;padding:2px 12px 7px;}
+.li{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--mu);}
+.ld{width:7px;height:7px;border-radius:50%;}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:300;display:none;align-items:flex-end;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);}
+.ov.op{display:flex;}
+.sh{background:var(--s1);border-radius:22px 22px 0 0;width:100%;padding:0 0 calc(20px + max(env(safe-area-inset-bottom),10px));max-height:90vh;overflow-y:auto;-webkit-overflow-scrolling:touch;animation:su .25s ease;}
+@keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.shh{width:36px;height:4px;background:var(--bd);border-radius:2px;margin:10px auto 0;}
+.sht{font-size:17px;font-weight:700;padding:13px 18px 9px;}
+.shs{padding:0 18px 12px;}
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.so{border-radius:12px;padding:10px 9px;cursor:pointer;display:flex;flex-direction:column;gap:2px;border:2px solid transparent;transition:border-color .15s;}
+.so.sl{border-color:currentColor!important;}
+.so .oe{font-size:19px;}
+.so .on{font-size:13px;font-weight:700;}
+.so .ot2{font-size:10px;opacity:.65;font-family:'Courier New',monospace;}
+input,select,textarea{background:var(--s2);border:1px solid var(--bd);color:var(--tx);border-radius:8px;padding:9px 11px;font-family:inherit;font-size:14px;outline:none;width:100%;-webkit-appearance:none;}
+textarea{resize:none;min-height:65px;line-height:1.5;}
+input[type=time],input[type=number]{width:auto;}
+.btn{width:100%;padding:13px;border-radius:13px;border:none;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;margin-top:7px;display:block;}
+.bp{background:linear-gradient(135deg,#6366F1,#10B981);color:#fff;}
+.bs{background:var(--s2);border:1px solid var(--bd)!important;color:var(--tx);}
+.sc2{background:var(--s1);border-radius:14px;margin-bottom:12px;overflow:hidden;}
+.sr2{display:flex;align-items:center;justify-content:space-between;padding:12px 15px;border-bottom:1px solid var(--bd);}
+.sr2:last-child{border-bottom:none;}
+.sl2{font-size:14px;font-weight:500;}
+.ss2{font-size:12px;color:var(--mu);margin-top:1px;}
+.sct{font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.08em;text-transform:uppercase;margin:13px 0 6px;}
+.tg{width:42px;height:25px;border-radius:13px;background:var(--bd);position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;}
+.tg.on{background:#818CF8;}
+.tg::after{content:'';position:absolute;top:2.5px;left:2.5px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .2s;}
+.tg.on::after{left:19.5px;}
+.stp{display:flex;align-items:center;gap:8px;}
+.stb{width:28px;height:28px;border-radius:50%;border:1px solid var(--bd);background:var(--s2);color:var(--tx);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.stv{font-size:14px;font-weight:700;min-width:24px;text-align:center;}
+.pd{display:flex;gap:5px;flex-wrap:wrap;margin:8px 0;}
+.pdi{width:40px;height:50px;border-radius:9px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;border:2px solid var(--bd);background:var(--s2);}
+.pdi .pdn{font-size:10px;font-weight:700;}
+.pdi .pde{font-size:14px;}
+.tp{background:var(--s2);border-radius:11px;padding:11px 13px;margin-bottom:7px;border-left:3px solid #FBBF24;}
+.otsum{background:linear-gradient(135deg,#1E1400,#0D0A2A);border:1px solid rgba(251,191,36,.3);border-radius:14px;padding:16px;margin-bottom:12px;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="hdr">
+    <div class="hr">
+      <div class="mnv">
+        <button class="mb" id="prevBtn">&#8249;</button>
+        <div class="mt" id="mTitle"></div>
+        <button class="mb" id="nextBtn">&#8250;</button>
+      </div>
+      <div style="display:flex;gap:7px">
+        <button class="ib" id="todayBtn">&#9678;</button>
+        <button class="ib" id="patBtn">&#9881;</button>
+      </div>
+    </div>
+  </div>
+  <div id="cnt">
+    <div id="todayStrip"></div>
+    <div class="leg" id="leg"></div>
+    <div class="wdr"><div class="wd">Sun</div><div class="wd">Mon</div><div class="wd">Tue</div><div class="wd">Wed</div><div class="wd">Thu</div><div class="wd">Fri</div><div class="wd">Sat</div></div>
+    <div class="cgr" id="cgr"></div>
+
+    <!-- SETTINGS PAGE -->
+    <div id="setPage" style="display:none;padding:14px">
+      <div class="sct">Cycle Start Date</div>
+      <div class="sc2"><div class="sr2" style="cursor:default">
+        <div><div class="sl2">Pattern Start</div><div class="ss2">Day 1 of your cycle</div></div>
+        <input type="date" id="csInput" style="width:auto" onchange="savCS(this.value)"/>
+      </div></div>
+
+      <div class="sct">Currency &amp; Rate</div>
+      <div class="sc2">
+        <div class="sr2" style="cursor:default">
+          <div><div class="sl2">Currency</div></div>
+          <select id="otCurr" onchange="savCurr()" style="width:auto;padding:7px 10px">
+            <option value="BHD">BHD - Bahrain Dinar</option>
+            <option value="USD">USD - US Dollar</option>
+            <option value="GBP">GBP - British Pound</option>
+            <option value="EUR">EUR - Euro</option>
+            <option value="AED">AED - UAE Dirham</option>
+            <option value="SAR">SAR - Saudi Riyal</option>
+            <option value="KWD">KWD - Kuwait Dinar</option>
+            <option value="QAR">QAR - Qatar Riyal</option>
+            <option value="OMR">OMR - Oman Rial</option>
+            <option value="EGP">EGP - Egyptian Pound</option>
+          </select>
+        </div>
+        <div class="sr2" style="cursor:default">
+          <div><div class="sl2">Hourly Rate</div><div class="ss2">Base pay per hour</div></div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span id="currSym" style="font-size:13px;color:var(--mu)">BD</span>
+            <input type="number" id="otRate" min="0" step="0.001" value="0.317" onchange="savRate()" style="width:90px"/>
+          </div>
+        </div>
+      </div>
+
+      <div class="sct">Overtime Config (per shift type)</div>
+      <div style="font-size:12px;color:var(--mu);margin-bottom:8px;line-height:1.6">Set segments for each shift. For off&#8594;duty OT the full shift hours use 1.5&#215;. For normal days only extra OT-segment hours count as overtime pay.</div>
+      <div id="otCfgSec"></div>
+
+      <div class="sct">Temporary Period Patterns</div>
+      <div id="tpList"></div>
+      <button class="btn bs" onclick="openTpSh(null)" style="margin-top:4px">+ Add Temporary Period Pattern</button>
+
+      <div class="sct">Reset</div>
+      <div class="sc2">
+        <div class="sr2" onclick="resetOv()"><div class="sl2" style="color:var(--sick)">Clear All Overrides &amp; Notes</div></div>
+        <div class="sr2" onclick="resetAll()"><div class="sl2" style="color:var(--sick)">Full Reset</div></div>
+      </div>
+      <div style="text-align:center;padding:16px 0;font-size:11px;color:#3A3A55">&copy; <span id="yr"></span> Sayed Baqer Alseb3 Limited. All rights reserved.</div>
+    </div>
+
+    <!-- OT PAGE -->
+    <div id="otPage" style="display:none;padding:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:18px;font-weight:700">&#128181; Overtime Calculator</div>
+      </div>
+      <div style="background:var(--s2);border-radius:12px;padding:12px;margin-bottom:12px">
+        <div style="font-size:12px;color:var(--mu);margin-bottom:8px">Calculate for date range</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+          <div><div style="font-size:12px;color:var(--mu);margin-bottom:3px">From</div><input type="date" id="otFrom" onchange="refreshOT()"/></div>
+          <div><div style="font-size:12px;color:var(--mu);margin-bottom:3px">To</div><input type="date" id="otTo" onchange="refreshOT()"/></div>
+        </div>
+      </div>
+      <div id="otResult"></div>
+    </div>
+  </div>
+
+  <div id="nav">
+    <button class="ntb on" id="nCal" onclick="showTab('cal')"><span class="ni">&#128197;</span>Calendar</button>
+    <button class="ntb" id="nOT"  onclick="showTab('ot')"><span class="ni">&#128181;</span>Overtime</button>
+    <button class="ntb" id="nSet" onclick="showTab('set')"><span class="ni">&#9881;&#65039;</span>Settings</button>
+  </div>
+</div>
+
+<!-- DAY SHEET -->
+<div class="ov" id="dayOv">
+<div class="sh">
+  <div class="shh"></div>
+  <div class="sht" id="dayT">Edit Day</div>
+  <div class="shs">
+    <div class="sg" id="shGrid"></div>
+    <!-- OT toggle -->
+    <div id="otRow" style="display:none;margin-top:12px;padding:11px 0;border-top:1px solid var(--bd)">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div><div style="font-size:14px;font-weight:600">Overtime</div><div style="font-size:12px;color:var(--mu);margin-top:1px" id="otDesc">-</div>
+        <div id="partialRow" style="display:none;margin-top:8px;align-items:center;gap:8px"><div style="font-size:12px;color:var(--mu)">Hours (Off-Duty):</div><select id="otHoursEl" onchange="setOTHours(this.value)" style="width:auto;padding:6px 10px;font-size:13px"><option value="">Full shift</option><option value="4">4h (half day)</option><option value="8">8h</option><option value="12">12h</option></select></div></div>
+        <select id="otSel" style="width:auto;padding:7px 10px;font-size:13px" onchange="onOTSel(this.value)">
+          <option value="auto">Auto</option>
+          <option value="yes">Yes - OT</option>
+          <option value="no">No - Normal</option>
+        </select>
+      </div>
+    </div>
+    <!-- PH toggle -->
+    <div style="margin-top:10px;padding:10px 0;border-top:1px solid var(--bd)">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div><div style="font-size:14px;font-weight:600">Public Holiday</div><div style="font-size:12px;color:var(--mu);margin-top:1px">1.5&#215; full duty hours</div></div>
+        <div class="tg" id="phTog" onclick="togPH()"></div>
+      </div>
+    </div>
+    <!-- Highlight -->
+    <div style="margin-top:10px;margin-bottom:5px;font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.07em;text-transform:uppercase">Highlight colour</div>
+    <div style="display:flex;gap:8px;margin-bottom:2px">
+      <div id="hlN" onclick="setHL('')"   style="width:30px;height:30px;border-radius:8px;background:var(--s2);border:2px solid var(--bd);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px">&#10005;</div>
+      <div id="hlY" onclick="setHL('y')" style="width:30px;height:30px;border-radius:8px;background:#FBBF24;border:2px solid transparent;cursor:pointer;"></div>
+      <div id="hlR" onclick="setHL('r')" style="width:30px;height:30px;border-radius:8px;background:#EF4444;border:2px solid transparent;cursor:pointer;"></div>
+      <div id="hlG" onclick="setHL('g')" style="width:30px;height:30px;border-radius:8px;background:#10B981;border:2px solid transparent;cursor:pointer;"></div>
+      <div id="hlB" onclick="setHL('b')" style="width:30px;height:30px;border-radius:8px;background:#818CF8;border:2px solid transparent;cursor:pointer;"></div>
+    </div>
+    <!-- Note -->
+    <div style="margin-top:12px;margin-bottom:5px;font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.07em;text-transform:uppercase">Note</div>
+    <textarea id="dayNote" placeholder="Add a note for this day..."></textarea>
+    <!-- Range -->
+    <div style="margin-top:12px;margin-bottom:8px;font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.07em;text-transform:uppercase">Apply to date range</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:10px">
+      <div><div style="font-size:12px;color:var(--mu);margin-bottom:3px">From</div><input type="date" id="rFrom"/></div>
+      <div><div style="font-size:12px;color:var(--mu);margin-bottom:3px">To</div><input type="date" id="rTo"/></div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--bd)">
+      <div><div style="font-size:14px;font-weight:500">Repeat override</div><div style="font-size:12px;color:var(--mu);margin-top:1px">e.g. every week x4</div></div>
+      <div class="tg" id="repTg" onclick="togRep()"></div>
+    </div>
+    <div id="repOpts" style="display:none;padding-top:5px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bd)">
+        <div style="font-size:14px;font-weight:500">Every</div>
+        <div class="stp">
+          <button class="stb" onclick="stepRe(-1)">&#8722;</button><div class="stv" id="reV">1</div><button class="stb" onclick="stepRe(1)">+</button>
+          <select id="reU" style="width:auto;padding:7px 9px"><option value="day">Days</option><option value="week" selected>Weeks</option><option value="month">Months</option></select>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">
+        <div style="font-size:14px;font-weight:500">Times</div>
+        <div class="stp"><button class="stb" onclick="stepOc(-1)">&#8722;</button><div class="stv" id="ocV">4</div><button class="stb" onclick="stepOc(1)">+</button></div>
+      </div>
+    </div>
+    <div id="applyBtnArea">
+      <button class="btn bp" onclick="applyOv()">&#10003; Apply</button>
+      <button class="btn bs" onclick="clearOv()">&#10005; Clear Override for Range</button>
+      <button class="btn bs" onclick="closeOv('dayOv')" style="margin-top:4px">Cancel</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- PATTERN SHEET -->
+<div class="ov" id="patOv">
+<div class="sh">
+  <div class="shh"></div><div class="sht">Rotating Base Pattern</div>
+  <div class="shs">
+    <div style="font-size:13px;color:var(--mu);margin-bottom:10px">Tap each day to set shift. Repeats forever.</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px">
+      <div style="font-size:14px;font-weight:600">Cycle length (days)</div>
+      <div class="stp"><button class="stb" onclick="stepCy(-1)">&#8722;</button><div class="stv" id="cyLen">12</div><button class="stb" onclick="stepCy(1)">+</button></div>
+    </div>
+    <div class="pd" id="patDays"></div>
+    <button class="btn bp" onclick="savePat()">Save Pattern</button>
+    <button class="btn bs" onclick="closeOv('patOv')">Cancel</button>
+  </div>
+</div>
+</div>
+
+<!-- TEMP PERIOD SHEET -->
+<div class="ov" id="tpOv">
+<div class="sh">
+  <div class="shh"></div><div class="sht" id="tpT">Temporary Period Pattern</div>
+  <div class="shs">
+    <div style="font-size:13px;color:var(--mu);margin-bottom:11px">Override base pattern for a date range with its own cycle.</div>
+    <div style="margin-bottom:9px"><div style="font-size:12px;color:var(--mu);margin-bottom:3px">Name</div><input type="text" id="tpNm" placeholder="e.g. Summer Rota"/></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px">
+      <div><div style="font-size:12px;color:var(--mu);margin-bottom:3px">Start</div><input type="date" id="tpSt"/></div>
+      <div><div style="font-size:12px;color:var(--mu);margin-bottom:3px">End</div><input type="date" id="tpEn"/></div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px">
+      <div style="font-size:14px;font-weight:600">Cycle length</div>
+      <div class="stp"><button class="stb" onclick="stepTC(-1)">&#8722;</button><div class="stv" id="tcLen">4</div><button class="stb" onclick="stepTC(1)">+</button></div>
+    </div>
+    <div class="pd" id="tpPD"></div>
+    <button class="btn bp" onclick="saveTp()">Save Period Pattern</button>
+    <button class="btn bs" onclick="closeOv('tpOv')">Cancel</button>
+  </div>
+</div>
+</div>
+
+<!-- PAT DAY PICKER -->
+<div class="ov" id="pdOv">
+<div class="sh">
+  <div class="shh"></div><div class="sht" id="pdT">Day 1</div>
+  <div class="shs">
+    <div class="sg" id="pdGrid"></div>
+    <button class="btn bs" onclick="closeOv('pdOv')" style="margin-top:10px">Done</button>
+  </div>
+</div>
+</div>
+
+<script>
+// ── SHIFT DEFINITIONS ────────────────────────────────────────────────────────
+var SH={
+  morning:  {n:'Morning',     e:'🌅',s:'06:00',f:'14:00',h:8, nd:false},
+  lmorning: {n:'Long Morning',e:'🌄',s:'06:00',f:'18:00',h:12,nd:false},
+  afternoon:{n:'Afternoon',   e:'☀️', s:'14:00',f:'22:00',h:8, nd:false},
+  night:    {n:'Night',       e:'🌙',s:'22:00',f:'06:00',h:8, nd:true},
+  lnight:   {n:'Long Night',  e:'🔑',s:'18:00',f:'06:00',h:12,nd:true},
+  off:      {n:'Off',         e:'😴',s:null,   f:null,   h:0, nd:false},
+  sick:     {n:'Sick Leave',  e:'🤒',s:null,   f:null,   h:0, nd:false},
+  leave:    {n:'Annual Leave',e:'🏖',s:null,   f:null,   h:0, nd:false},
+  training: {n:'Training',    e:'📚',s:'09:00',f:'17:00',h:8, nd:false},
+};
+var SC={morning:'#F59E0B',lmorning:'#FBBF24',afternoon:'#10B981',night:'#818CF8',lnight:'#A78BFA',off:'#4B5563',sick:'#EF4444',leave:'#06B6D4',training:'#A855F7'};
+var SBG={morning:'#1E1400',lmorning:'#241A00',afternoon:'#001810',night:'#0D0A2A',lnight:'#130A30',off:'#111118',sick:'#1A0606',leave:'#001820',training:'#180A28'};
+var MN=['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+// ── DEFAULT OT CONFIG ────────────────────────────────────────────────────────
+var DEF_OT={
+  morning:  {patOT:[],                             offOT:[{h:8, r:1.5}]},
+  lmorning: {patOT:[{h:4,r:1.25}],                offOT:[{h:12,r:1.5}]},
+  afternoon:{patOT:[],                             offOT:[{h:8, r:1.5}]},
+  night:    {patOT:[],                             offOT:[{h:8, r:1.5}]},
+  lnight:   {patOT:[{h:1,r:1.25},{h:3,r:1.5}],   offOT:[{h:12,r:1.5}]},
+  training: {patOT:[],                             offOT:[{h:8, r:1.5}]},
+};
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+var ST={
+  cs:'2026-05-10',
+  pat:['morning','morning','morning','night','night','night','off','off','afternoon','afternoon','afternoon','off'],
+  ov:{},nt:{},hl:{},ph:{},manualOT:{},otHours:{},otCfgUser:{},tp:[],
+  otCfg:JSON.parse(JSON.stringify(DEF_OT)),
+  otRate:0.317,otCurr:'BHD',
+};
+
+function loadST(){
+  try{
+    var s=localStorage.getItem('sc_ot_v1');
+    if(s){
+      var p=JSON.parse(s);
+      var safeFields=['cs','pat','ov','nt','hl','ph','manualOT','otHours','tp','otRate','otCurr','otCfgUser'];
+      safeFields.forEach(function(k){if(p[k]!==undefined)ST[k]=p[k];});
+      if(!ST.ph)ST.ph={};
+      if(!ST.manualOT)ST.manualOT={};
+      if(!ST.otHours)ST.otHours={};
+      if(!ST.nt)ST.nt={};
+      if(!ST.hl)ST.hl={};
+      if(!ST.otCfgUser)ST.otCfgUser={};
+      if(!ST.tp)ST.tp=[];
+    }
+  }catch(e){}
+  // Build otCfg fresh from DEF_OT + user overrides
+  ST.otCfg={};
+  Object.keys(DEF_OT).forEach(function(sk){
+    var def=DEF_OT[sk];
+    var user=ST.otCfgUser&&ST.otCfgUser[sk];
+    ST.otCfg[sk]={
+      patOT:(user&&user.patOT)?user.patOT:JSON.parse(JSON.stringify(def.patOT)),
+      offOT:JSON.parse(JSON.stringify(def.offOT)),
+    };
+  });
+}
+
+function savST(){try{localStorage.setItem('sc_ot_v1',JSON.stringify(ST));}catch(e){}}
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+function dk(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function pd(s){var p=s.split('-').map(Number);return new Date(p[0],p[1]-1,p[2]);}
+function aD(d,n){var r=new Date(d);r.setDate(r.getDate()+n);return r;}
+function getCurrSym(c){return{BHD:'BD',USD:'$',GBP:'£',EUR:'€',AED:'AED',SAR:'SR',KWD:'KD',QAR:'QR',OMR:'OMR',EGP:'E£'}[c]||c;}
+
+// ── SHIFT RESOLUTION ─────────────────────────────────────────────────────────
+function getShift(ds){
+  if(ST.ov[ds])return ST.ov[ds];
+  var d=pd(ds);
+  for(var i=0;i<ST.tp.length;i++){
+    var t=ST.tp[i];var ts=pd(t.s),te=pd(t.e);
+    if(d>=ts&&d<=te){var diff=Math.round((d-ts)/86400000);var len=t.p.length;return t.p[((diff%len)+len)%len];}
+  }
+  var st=pd(ST.cs);var diff=Math.round((d-st)/86400000);var len=ST.pat.length;
+  return ST.pat[((diff%len)+len)%len];
+}
+function getBase(ds){
+  var d=pd(ds);var st=pd(ST.cs);var diff=Math.round((d-st)/86400000);var len=ST.pat.length;
+  return ST.pat[((diff%len)+len)%len];
+}
+
+// ── OVERTIME LOGIC ───────────────────────────────────────────────────────────
+function isOT(ds){
+  var sk=getShift(ds);
+  if(!SH[sk]||!SH[sk].s)return false;
+  if(ST.manualOT[ds]===true)return true;
+  if(ST.manualOT[ds]===false)return false;
+  var base=getBase(ds);
+  if(!SH[base]||!SH[base].s){if(SH[sk]&&SH[sk].s)return true;}
+  var d=pd(ds);
+  for(var i=0;i<ST.tp.length;i++){
+    var t=ST.tp[i];
+    if(d>=pd(t.s)&&d<=pd(t.e)){var bk=getBase(ds);if(!SH[bk]||!SH[bk].s)return true;}
+  }
+  return false;
+}
+
+function computeDay(ds){
+  var sk=getShift(ds);var sh=SH[sk];
+  if(!sh||!sh.s)return{segs:[],otH:0,otPay:0,normalH:0,phPay:0,isPH:false};
+  var rate=parseFloat(ST.otRate)||0.317;
+  var isPH=!!ST.ph[ds];
+  var offDuty=isOT(ds);
+  var shiftH=sh.h;
+  var customH=ST.otHours&&ST.otHours[ds]?parseFloat(ST.otHours[ds]):null;
+  var dutyH=customH||shiftH;
+  var cfg=ST.otCfg[sk]||DEF_OT[sk]||{patOT:[],offOT:[{h:shiftH,r:1.5}]};
+  var segs=[],otH=0,otPay=0,normalH=0,phPay=0;
+
+  if(isPH){
+    segs=[{h:dutyH,r:1.5,label:'PH'}];
+    phPay=dutyH*rate*1.5;
+  } else if(offDuty){
+    segs=[{h:dutyH,r:1.5,label:'Off-Duty'}];
+    otH=dutyH;otPay=dutyH*rate*1.5;
+  } else {
+    var patSegs=cfg.patOT||[];
+    var patOTH=patSegs.reduce(function(a,s){return a+(parseFloat(s.h)||0);},0);
+    var normH=Math.max(0,shiftH-patOTH);
+    if(normH>0){segs.push({h:normH,r:1.0,label:''});normalH+=normH;}
+    patSegs.forEach(function(s){
+      var h=parseFloat(s.h)||0;var r=parseFloat(s.r)||1.5;
+      segs.push({h:h,r:r,label:'OT'});otH+=h;otPay+=h*rate*r;
+    });
+    if(segs.length===0){segs=[{h:shiftH,r:1.0,label:''}];normalH=shiftH;}
+  }
+  return{segs:segs,otH:otH,otPay:otPay,normalH:normalH,phPay:phPay,isPH:isPH};
+}
+
+function calcOT(fromDs,toDs){
+  var from=pd(fromDs),to=pd(toDs);
+  var rate=parseFloat(ST.otRate)||0.317;
+  var days=[],totalH=0,otH=0,otPay=0,phH=0,phPay=0;
+  var cur=new Date(from);
+  while(cur<=to){
+    var ds=dk(cur);var sk=getShift(ds);var sh=SH[sk];
+    if(sh&&sh.s){
+      var r=computeDay(ds);
+      var dayH=ST.otHours&&ST.otHours[ds]&&isOT(ds)&&(!SH[getBase(ds)]||!SH[getBase(ds)].s)
+        ?parseFloat(ST.otHours[ds]):sh.h;
+      totalH+=dayH;
+      if(r.isPH){phH+=dayH;phPay+=r.phPay;}
+      else{otH+=r.otH;otPay+=r.otPay;}
+      days.push({ds:ds,sk:sk,sh:sh,segs:r.segs,dayH:dayH,dayOtH:r.otH,dayOtPay:r.otPay,
+        normalH:r.normalH,isOT:isOT(ds),isPH:r.isPH,phPay:r.phPay,base:getBase(ds)});
+    }
+    cur=aD(cur,1);
+  }
+  return{days:days,totalH:totalH,totalPay:otPay+phPay,otH:otH,otPay:otPay,phH:phH,phPay:phPay,rate:rate};
+}
+
+// ── VIEW ─────────────────────────────────────────────────────────────────────
+var VY=new Date().getFullYear(),VM=new Date().getMonth(),curTab='cal',selDay=null;
+
+function render(){
+  document.getElementById('mTitle').textContent=MN[VM]+' '+VY;
+  var today=new Date();today.setHours(0,0,0,0);var tds=dk(today);
+  var first=new Date(VY,VM,1),last=new Date(VY,VM+1,0);
+  var pad=first.getDay();
+  var gr=document.getElementById('cgr');gr.innerHTML='';
+  var used={};
+  for(var i=0;i<pad;i++)gr.appendChild(mkCell(new Date(VY,VM,1-(pad-i)),true,tds));
+  for(var d=1;d<=last.getDate();d++){var date=new Date(VY,VM,d);used[getShift(dk(date))]=1;gr.appendChild(mkCell(date,false,tds));}
+  var ep=(7-((pad+last.getDate())%7))%7;
+  for(var j=1;j<=ep;j++)gr.appendChild(mkCell(new Date(VY,VM+1,j),true,tds));
+  renderStrip(tds);
+  var legEl=document.getElementById('leg');legEl.innerHTML='';
+  Object.keys(used).forEach(function(k){var s=SH[k];var col=SC[k]||'#4B5563';legEl.innerHTML+='<div class="li"><div class="ld" style="background:'+col+'"></div>'+s.n+'</div>';});
+}
+
+function mkCell(date,other,tds){
+  var ds=dk(date);var sk=getShift(ds);var sh=SH[sk]||SH.off;
+  var col=SC[sk]||'#4B5563';var bg=SBG[sk]||'#111118';
+  var isToday=ds===tds;var hasNote=!!ST.nt[ds];var hl=ST.hl[ds]||'';
+  var otDay=isOT(ds);var isPHday=!!ST.ph[ds];
+  var isTp=!ST.ov[ds]&&ST.tp.some(function(t){return pd(ds)>=pd(t.s)&&pd(ds)<=pd(t.e);});
+  var cell=document.createElement('div');
+  var cls='cd';
+  if(other)cls+=' xo';if(isToday)cls+=' tod';if(hasNote)cls+=' hn';
+  if(otDay)cls+=' ot';if(isPHday)cls+=' ph-day';
+  if(hl==='y')cls+=' hy';else if(hl==='r')cls+=' hr2';else if(hl==='g')cls+=' hg';else if(hl==='b')cls+=' hb';
+  cell.className=cls;
+  if(!hl)cell.style.background=bg;
+  if(hasNote)cell.style.color=col;
+  if(isTp)cell.style.outline='1px solid rgba(251,191,36,.25)';
+  if(!other)cell.onclick=(function(d){return function(){openDay(d);};})(ds);
+  var dn=document.createElement('div');dn.className='dn';dn.style.color=col;dn.textContent=date.getDate();
+  var de=document.createElement('div');de.className='de';de.textContent=sh.e;
+  cell.appendChild(dn);cell.appendChild(de);
+  if(isPHday&&!other){var pb=document.createElement('div');pb.style.cssText='position:absolute;bottom:2px;left:2px;font-size:7px;color:#06B6D4;font-weight:700';pb.textContent='PH';cell.appendChild(pb);}
+  return cell;
+}
+
+function renderStrip(tds){
+  var sk=getShift(tds);var sh=SH[sk]||SH.off;var col=SC[sk]||'#4B5563';var bg=SBG[sk]||'#111118';
+  var tmr=dk(aD(pd(tds),1));var tmrSk=getShift(tmr);var tmrSh=SH[tmrSk]||SH.off;var tmrCol=SC[tmrSk]||'#4B5563';
+  var nt=ST.nt[tds];var ph=!!ST.ph[tds];var ot=isOT(tds);
+  document.getElementById('todayStrip').innerHTML='<div class="ts" style="background:'+bg+';border:1px solid '+col+'22" onclick="openDay(\''+tds+'\')"><div style="font-size:30px">'+sh.e+'</div><div style="flex:1;min-width:0"><div style="font-size:17px;font-weight:800;color:'+col+'">'+sh.n+(ot?' <span style="font-size:11px;color:#FBBF24">OT</span>':'')+(ph?' <span style="font-size:11px;color:#06B6D4">PH</span>':'')+'</div><div style="font-size:12px;opacity:.7;margin-top:1px">'+(sh.s?sh.s+' – '+sh.f:'Rest day')+'</div>'+(nt?'<div style="font-size:11px;color:#FBBF24;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">&#128203; '+nt+'</div>':'')+'</div><div style="text-align:right;flex-shrink:0"><div style="font-size:10px;color:var(--mu);margin-bottom:2px">Tomorrow</div><div style="font-size:18px">'+tmrSh.e+'</div><div style="font-size:10px;color:'+tmrCol+'">'+tmrSh.n+'</div></div></div>';
+}
+
+// ── NAVIGATION ───────────────────────────────────────────────────────────────
+document.getElementById('prevBtn').onclick=function(){VM--;if(VM<0){VM=11;VY--;}render();};
+document.getElementById('nextBtn').onclick=function(){VM++;if(VM>11){VM=0;VY++;}render();};
+document.getElementById('todayBtn').onclick=function(){var n=new Date();VY=n.getFullYear();VM=n.getMonth();render();};
+document.getElementById('patBtn').onclick=openPat;
+
+function showTab(t){
+  curTab=t;
+  var calIds=['cgr','todayStrip','leg'];
+  var wd=document.querySelector('.wdr');
+  ['nCal','nOT','nSet'].forEach(function(id){document.getElementById(id).classList.remove('on');});
+  var tabIdMap={cal:'nCal',ot:'nOT',set:'nSet'};
+  var activeId=tabIdMap[t];
+  if(activeId)document.getElementById(activeId).classList.add('on');
+  if(t==='cal'){
+    calIds.forEach(function(id){var e=document.getElementById(id);if(e)e.style.display='';});
+    wd.style.display='';
+    document.getElementById('setPage').style.display='none';
+    document.getElementById('otPage').style.display='none';
+  } else if(t==='set'){
+    calIds.forEach(function(id){var e=document.getElementById(id);if(e)e.style.display='none';});
+    wd.style.display='none';
+    document.getElementById('setPage').style.display='block';
+    document.getElementById('otPage').style.display='none';
+    loadSettings();
+  } else if(t==='ot'){
+    calIds.forEach(function(id){var e=document.getElementById(id);if(e)e.style.display='none';});
+    wd.style.display='none';
+    document.getElementById('setPage').style.display='none';
+    document.getElementById('otPage').style.display='block';
+    renderOTPage();
+  }
+}
+
+function closeOv(id){document.getElementById(id).classList.remove('op');}
+window.addEventListener('DOMContentLoaded',function(){
+  document.querySelectorAll('.ov').forEach(function(o){
+    o.addEventListener('click',function(e){if(e.target===o)o.classList.remove('op');});
+  });
+});
+
+// ── DAY SHEET ────────────────────────────────────────────────────────────────
+var editDs=null,editSk=null,editHL='',repOn=false,reEv=1,reOc=4;
+
+function openDay(ds){
+  editDs=ds;selDay=ds;render();
+  var d=pd(ds);var DN=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  document.getElementById('dayT').textContent=DN[d.getDay()]+', '+d.toLocaleDateString('en-GB',{day:'numeric',month:'long'});
+  editSk=getShift(ds);
+  renderSG('shGrid',editSk);
+  document.getElementById('dayNote').value=ST.nt[ds]||'';
+  editHL=ST.hl[ds]||'';updateHL(editHL);
+  document.getElementById('rFrom').value=ds;document.getElementById('rTo').value=ds;
+  var phTog=document.getElementById('phTog');if(phTog)phTog.classList.toggle('on',!!ST.ph[ds]);
+  var otSel=document.getElementById('otSel');if(otSel){var mv=ST.manualOT[ds];otSel.value=mv===true?'yes':mv===false?'no':'auto';}
+  updateOTRow(editSk);
+  repOn=false;document.getElementById('repTg').classList.remove('on');document.getElementById('repOpts').style.display='none';
+  document.getElementById('reV').textContent='1';document.getElementById('ocV').textContent='4';
+  var ba=document.getElementById('applyBtnArea');
+  if(ba)ba.innerHTML='<button class="btn bp" onclick="applyOv()">&#10003; Apply</button><button class="btn bs" onclick="clearOv()">&#10005; Clear Override for Range</button><button class="btn bs" onclick="closeOv(\'dayOv\')" style="margin-top:4px">Cancel</button>';
+  document.getElementById('dayOv').classList.add('op');
+}
+
+function renderSG(gId,cur){
+  var g=document.getElementById(gId);if(!g)return;g.innerHTML='';
+  Object.keys(SH).forEach(function(k){
+    var s=SH[k];var isSel=k===cur;
+    var el=document.createElement('div');
+    el.className='so'+(isSel?' sl':'');
+    el.style.background=SBG[k]||'#111118';el.style.color=SC[k]||'#4B5563';
+    if(isSel)el.style.borderColor=SC[k]||'#818CF8';
+    el.innerHTML='<div class="oe">'+s.e+'</div><div class="on">'+s.n+'</div><div class="ot2">'+(s.s?s.s+'–'+s.f:'No shift')+'</div>';
+    el.addEventListener('click',function(ev){ev.stopPropagation();editSk=k;renderSG(gId,k);updateOTRow(k);});
+    g.appendChild(el);
+  });
+}
+
+function updateOTRow(sk){
+  var otRow=document.getElementById('otRow');var otDesc=document.getElementById('otDesc');
+  var partRow=document.getElementById('partialRow');
+  if(!editDs||!SH[sk]||!SH[sk].s){if(otRow)otRow.style.display='none';return;}
+  otRow.style.display='block';
+  var base=getBase(editDs);var baseSh=SH[base];
+  var isOffDuty=!baseSh||!baseSh.s;
+  var desc='Normal duty — premium segs counted per config';
+  if(isOffDuty){
+    desc='Off→Duty (auto OT): all hours × 1.5';
+    if(partRow){partRow.style.display='flex';}
+    var hoursEl=document.getElementById('otHoursEl');
+    if(hoursEl&&ST.otHours&&ST.otHours[editDs])hoursEl.value=String(ST.otHours[editDs]);
+    else if(hoursEl)hoursEl.value='';
+  } else {
+    if(partRow)partRow.style.display='none';
+    if(SH[sk].h>(baseSh&&baseSh.h||0)){desc='Longer shift: '+((baseSh&&baseSh.h)||0)+'h base + '+(SH[sk].h-((baseSh&&baseSh.h)||0))+'h extra — mark OT=Yes to count extra';}
+    else if(sk!==base){desc='Shift swap (same hours) — no auto OT';}
+  }
+  if(otDesc)otDesc.textContent=desc;
+}
+
+function updateHL(hl){
+  var map={N:'',Y:'y',R:'r',G:'g',B:'b'};
+  ['N','Y','R','G','B'].forEach(function(c){
+    var el=document.getElementById('hl'+c);if(!el)return;
+    var match=(c==='N'&&!hl)||(map[c]===hl);
+    el.style.borderColor=match?'#fff':'transparent';
+    el.style.transform=match?'scale(1.2)':'scale(1)';
+  });
+}
+function setHL(h){editHL=h;updateHL(h);}
+function setOTHours(v){if(editDs){if(v)ST.otHours[editDs]=parseFloat(v);else delete ST.otHours[editDs];savST();}}
+function onOTSel(v){if(editDs){if(v==='yes')ST.manualOT[editDs]=true;else if(v==='no')ST.manualOT[editDs]=false;else delete ST.manualOT[editDs];}}
+function togPH(){
+  var tog=document.getElementById('phTog');if(!editDs)return;
+  var on=!tog.classList.contains('on');tog.classList.toggle('on',on);
+  if(on)ST.ph[editDs]=true;else delete ST.ph[editDs];
+  savST();render();
+}
+function togRep(){repOn=!repOn;document.getElementById('repTg').classList.toggle('on',repOn);document.getElementById('repOpts').style.display=repOn?'block':'none';}
+function stepRe(d){reEv=Math.max(1,reEv+d);document.getElementById('reV').textContent=reEv;}
+function stepOc(d){reOc=Math.max(1,reOc+d);document.getElementById('ocV').textContent=reOc;}
+
+function applyOv(){
+  var fv=document.getElementById('rFrom').value,tv=document.getElementById('rTo').value;
+  if(!fv||!tv){alert('Set dates.');return;}
+  var from=pd(fv),to=pd(tv);if(from>to){alert('From must be before To.');return;}
+  var unit=document.getElementById('reU').value;
+  var note=document.getElementById('dayNote').value.trim();
+  var otSel=document.getElementById('otSel');var otVal=otSel?otSel.value:'auto';
+  function apR(f,t){
+    var c2=new Date(f);
+    while(c2<=t){
+      var ds2=dk(c2);var base2=getBase(ds2);
+      ST.ov[ds2]=editSk;
+      if(note)ST.nt[ds2]=note;else delete ST.nt[ds2];
+      if(editHL)ST.hl[ds2]=editHL;else delete ST.hl[ds2];
+      var baseOff=!SH[base2]||!SH[base2].s;var newDuty=SH[editSk]&&SH[editSk].s;
+      if(otVal==='yes')ST.manualOT[ds2]=true;
+      else if(otVal==='no')ST.manualOT[ds2]=false;
+      else{if(baseOff&&newDuty)ST.manualOT[ds2]=true;else delete ST.manualOT[ds2];}
+      c2=aD(c2,1);
+    }
+  }
+  apR(from,to);
+  if(repOn){var anc=new Date(from);var sp=to.getTime()-from.getTime();for(var i=1;i<reOc;i++){if(unit==='day')anc=aD(anc,reEv);else if(unit==='week')anc=aD(anc,reEv*7);else{anc=new Date(anc);anc.setMonth(anc.getMonth()+reEv);}apR(anc,new Date(anc.getTime()+sp));}}
+  savST();selDay=null;render();
+  if(curTab==='ot')refreshOT();
+  closeOv('dayOv');
+}
+
+function clearOv(){
+  var fv=document.getElementById('rFrom').value,tv=document.getElementById('rTo').value;
+  if(!fv||!tv)return;var from=pd(fv),to=pd(tv);
+  var c2=new Date(from);
+  while(c2<=to){var ds2=dk(c2);delete ST.ov[ds2];delete ST.hl[ds2];delete ST.nt[ds2];delete ST.manualOT[ds2];delete ST.ph[ds2];c2=aD(c2,1);}
+  savST();selDay=null;render();closeOv('dayOv');
+}
+
+// ── PATTERN ──────────────────────────────────────────────────────────────────
+var ePat=[],eLen=12;
+function openPat(){ePat=[].concat(ST.pat);eLen=ePat.length;document.getElementById('cyLen').textContent=eLen;renderPD();document.getElementById('patOv').classList.add('op');}
+function stepCy(d){eLen=Math.max(1,Math.min(60,eLen+d));while(ePat.length<eLen)ePat.push('off');while(ePat.length>eLen)ePat.pop();document.getElementById('cyLen').textContent=eLen;renderPD();}
+function renderPD(){var c=document.getElementById('patDays');c.innerHTML='';ePat.forEach(function(k,i){var el=document.createElement('div');el.className='pdi';el.style.background=SBG[k]||'#111118';el.style.borderColor=SC[k]||'#4B5563';el.innerHTML='<div class="pdn" style="color:'+(SC[k]||'#4B5563')+'">'+(i+1)+'</div><div class="pde">'+(SH[k]?SH[k].e:'?')+'</div>';el.onclick=(function(idx){return function(){openPD(idx,'base');};})(i);c.appendChild(el);});}
+function savePat(){ST.pat=[].concat(ePat);savST();render();closeOv('patOv');}
+
+// ── TEMP PERIOD ───────────────────────────────────────────────────────────────
+var tpEP=[],tpEL=4,tpEId=null;
+function openTpSh(id){tpEId=id;var ex=id?ST.tp.filter(function(t){return t.id===id;})[0]:null;document.getElementById('tpT').textContent=ex?'Edit Period':'New Period Pattern';document.getElementById('tpNm').value=ex?ex.nm:'';document.getElementById('tpSt').value=ex?ex.s:dk(new Date());document.getElementById('tpEn').value=ex?ex.e:'';tpEP=ex?[].concat(ex.p):['morning','morning','off','off'];tpEL=tpEP.length;document.getElementById('tcLen').textContent=tpEL;renderTPD();document.getElementById('tpOv').classList.add('op');}
+function stepTC(d){tpEL=Math.max(1,Math.min(60,tpEL+d));while(tpEP.length<tpEL)tpEP.push('off');while(tpEP.length>tpEL)tpEP.pop();document.getElementById('tcLen').textContent=tpEL;renderTPD();}
+function renderTPD(){var c=document.getElementById('tpPD');c.innerHTML='';tpEP.forEach(function(k,i){var el=document.createElement('div');el.className='pdi';el.style.background=SBG[k]||'#111118';el.style.borderColor=SC[k]||'#4B5563';el.innerHTML='<div class="pdn" style="color:'+(SC[k]||'#4B5563')+'">'+(i+1)+'</div><div class="pde">'+(SH[k]?SH[k].e:'?')+'</div>';el.onclick=(function(idx){return function(){openPD(idx,'tp');};})(i);c.appendChild(el);});}
+function saveTp(){var nm=document.getElementById('tpNm').value.trim()||'Period';var s=document.getElementById('tpSt').value,e=document.getElementById('tpEn').value;if(!s||!e){alert('Set dates.');return;}var entry={id:tpEId||String(Date.now()),nm:nm,s:s,e:e,p:[].concat(tpEP)};if(tpEId)ST.tp=ST.tp.map(function(t){return t.id===tpEId?entry:t;});else ST.tp.push(entry);savST();render();renderTpList();closeOv('tpOv');}
+function renderTpList(){var c=document.getElementById('tpList');if(!c)return;if(!ST.tp.length){c.innerHTML='<div style="font-size:13px;color:var(--mu);padding:4px 0 8px">No temporary periods yet.</div>';return;}c.innerHTML=ST.tp.map(function(t){var pat=t.p.slice(0,10).map(function(k){return SH[k]?SH[k].e:'?';}).join('');var more=t.p.length>10?' +'+(t.p.length-10):'';return'<div class="tp"><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:14px;font-weight:700">'+t.nm+'</div><div style="display:flex;gap:4px"><button onclick="openTpSh(\''+t.id+'\')" style="background:none;border:none;color:var(--mu);font-size:15px;cursor:pointer;padding:4px">&#9998;</button><button onclick="delTp(\''+t.id+'\')" style="background:none;border:none;color:var(--sick);font-size:15px;cursor:pointer;padding:4px">&#10005;</button></div></div><div style="font-size:12px;color:var(--mu);margin-top:3px">'+t.s+' &rarr; '+t.e+' &middot; '+t.p.length+'-day cycle</div><div style="font-size:15px;margin-top:5px;letter-spacing:2px">'+pat+more+'</div></div>';}).join('');}
+function delTp(id){if(confirm('Delete?')){ST.tp=ST.tp.filter(function(t){return t.id!==id;});savST();render();renderTpList();}}
+
+// ── PAT DAY PICKER ────────────────────────────────────────────────────────────
+var pdI=null,pdC='base';
+function openPD(i,c){pdI=i;pdC=c;document.getElementById('pdT').textContent='Day '+(i+1);var cur=c==='tp'?tpEP[i]:ePat[i];renderSG2('pdGrid',cur);document.getElementById('pdOv').classList.add('op');}
+function renderSG2(gId,cur){
+  var g=document.getElementById(gId);if(!g)return;g.innerHTML='';
+  Object.keys(SH).forEach(function(k){
+    var s=SH[k];var isSel=k===cur;
+    var el=document.createElement('div');el.className='so'+(isSel?' sl':'');
+    el.style.background=SBG[k]||'#111118';el.style.color=SC[k]||'#4B5563';
+    if(isSel)el.style.borderColor=SC[k]||'#818CF8';
+    el.innerHTML='<div class="oe">'+s.e+'</div><div class="on">'+s.n+'</div><div class="ot2">'+(s.s?s.s+'–'+s.f:'No shift')+'</div>';
+    el.addEventListener('click',function(ev){ev.stopPropagation();if(pdC==='tp'){tpEP[pdI]=k;renderTPD();}else{ePat[pdI]=k;renderPD();}renderSG2(gId,k);});
+    g.appendChild(el);
+  });
+}
+
+// ── SETTINGS ─────────────────────────────────────────────────────────────────
+function loadSettings(){
+  document.getElementById('csInput').value=ST.cs;
+  document.getElementById('otRate').value=ST.otRate||0.317;
+  var cur=ST.otCurr||'BHD';
+  var sel=document.getElementById('otCurr');if(sel)sel.value=cur;
+  var sym=document.getElementById('currSym');if(sym)sym.textContent=getCurrSym(cur);
+  document.getElementById('yr').textContent=new Date().getFullYear();
+  renderOTCfg();renderTpList();
+}
+function savCS(v){ST.cs=v;savST();render();}
+function savRate(){ST.otRate=parseFloat(document.getElementById('otRate').value)||0.317;savST();}
+function savCurr(){var v=document.getElementById('otCurr').value;ST.otCurr=v;var sym=document.getElementById('currSym');if(sym)sym.textContent=getCurrSym(v);savST();}
+
+function renderOTCfg(){
+  var cont=document.getElementById('otCfgSec');if(!cont)return;cont.innerHTML='';
+  var ws=Object.keys(SH).filter(function(k){return SH[k]&&SH[k].s;});
+  ws.forEach(function(sk){
+    var s=SH[sk];var col=SC[sk]||'#818CF8';var bg=SBG[sk]||'#111118';
+    var cfg=ST.otCfg[sk]||DEF_OT[sk]||{patOT:[],offOT:[{h:s.h,r:1.5}]};
+    var curSegs=cfg.patOT||[];
+    var patOTH=curSegs.reduce(function(a,x){return a+(parseFloat(x.h)||0);},0);
+    var normalPortion=Math.max(0,s.h-patOTH);
+    var wrap=document.createElement('div');
+    wrap.style.cssText='background:'+bg+';border-left:3px solid '+col+';border-radius:12px;padding:12px;margin-bottom:9px';
+    var t=document.createElement('div');t.style.cssText='font-size:14px;font-weight:700;color:'+col+';margin-bottom:8px';t.textContent=s.e+' '+s.n+' ('+s.h+'h)';wrap.appendChild(t);
+    var nb=document.createElement('div');nb.style.cssText='font-size:12px;padding:7px 10px;background:var(--s2);border-radius:7px;margin-bottom:6px';
+    if(curSegs.length>0){var sd=curSegs.map(function(x){return parseFloat(x.h).toFixed(1)+'h×'+x.r;}).join(' + ');nb.innerHTML='Normal day: <b style="color:var(--tx)">'+normalPortion.toFixed(1)+'h normal + '+sd+' OT</b>';}
+    else{nb.innerHTML='Normal day: <b style="color:var(--tx)">'+s.h+'h — no OT pay</b>';}
+    wrap.appendChild(nb);
+    var ob=document.createElement('div');ob.style.cssText='font-size:12px;padding:7px 10px;background:var(--s2);border-radius:7px;margin-bottom:10px';ob.innerHTML='Off-Duty / PH: <b style="color:#06B6D4">'+s.h+'h × 1.5 (flat)</b>';wrap.appendChild(ob);
+    var sl=document.createElement('div');sl.style.cssText='font-size:11px;color:#FBBF24;font-weight:600;margin-bottom:7px';sl.textContent='Normal-day OT segments (0 = no OT on normal days):';wrap.appendChild(sl);
+    var cr=document.createElement('div');cr.style.cssText='display:flex;align-items:center;gap:6px;margin-bottom:8px';
+    [0,1,2,3].forEach(function(n){
+      var btn=document.createElement('button');btn.textContent=n===0?'None':String(n);
+      btn.style.cssText='padding:4px 11px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;'
+        +'border:1px solid '+(curSegs.length===n?col:'var(--bd)')
+        +';background:'+(curSegs.length===n?col:'var(--s1)')
+        +';color:'+(curSegs.length===n?'#000':'var(--tx)');
+      (function(cnt,key){btn.onclick=function(){
+        if(!ST.otCfgUser)ST.otCfgUser={};
+        var defSegs=JSON.parse(JSON.stringify(DEF_OT[key]?DEF_OT[key].patOT||[]:[]));
+        if(!ST.otCfgUser[key])ST.otCfgUser[key]={patOT:defSegs};
+        var cur=ST.otCfgUser[key].patOT;
+        while(cur.length<cnt)cur.push({h:1,r:1.5});while(cur.length>cnt)cur.pop();
+        ST.otCfg[key]={patOT:JSON.parse(JSON.stringify(cur)),offOT:JSON.parse(JSON.stringify(DEF_OT[key]?DEF_OT[key].offOT||[]:[{h:SH[key].h,r:1.5}]))};
+        savST();renderOTCfg();
+      };})(n,sk);
+      cr.appendChild(btn);
+    });
+    wrap.appendChild(cr);
+    curSegs.forEach(function(seg,i){
+      var row=document.createElement('div');row.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:7px;padding:8px;background:rgba(251,191,36,.07);border-radius:8px';
+      var hInp=document.createElement('input');hInp.type='number';hInp.min='0.5';hInp.max='24';hInp.step='0.5';hInp.value=parseFloat(seg.h).toFixed(1);
+      hInp.style.cssText='background:var(--s2);border:1px solid var(--bd);color:var(--tx);border-radius:8px;padding:8px;font-family:inherit;font-size:14px;outline:none;width:100%';
+      (function(key,idx){hInp.onchange=function(){
+        if(!ST.otCfgUser)ST.otCfgUser={};
+        if(!ST.otCfgUser[key])ST.otCfgUser[key]={patOT:JSON.parse(JSON.stringify(DEF_OT[key]?DEF_OT[key].patOT||[]:[])) };
+        if(ST.otCfgUser[key].patOT[idx])ST.otCfgUser[key].patOT[idx].h=parseFloat(this.value)||0;
+        ST.otCfg[key].patOT=JSON.parse(JSON.stringify(ST.otCfgUser[key].patOT));
+        savST();renderOTCfg();
+      };})(sk,i);
+      var rSel=document.createElement('select');
+      rSel.style.cssText='background:var(--s2);border:1px solid var(--bd);color:var(--tx);border-radius:8px;padding:8px;font-family:inherit;font-size:14px;outline:none;width:100%';
+      [{v:'1.25',t:'1.25x (+25%)'},{v:'1.5',t:'1.5x (+50%)'},{v:'2.0',t:'2.0x (double)'}].forEach(function(opt){
+        var o=document.createElement('option');o.value=opt.v;o.textContent=opt.t;
+        if(Math.abs(parseFloat(seg.r)-parseFloat(opt.v))<0.001)o.selected=true;
+        rSel.appendChild(o);
+      });
+      (function(key,idx){rSel.onchange=function(){
+        if(!ST.otCfgUser)ST.otCfgUser={};
+        if(!ST.otCfgUser[key])ST.otCfgUser[key]={patOT:JSON.parse(JSON.stringify(DEF_OT[key]?DEF_OT[key].patOT||[]:[])) };
+        if(ST.otCfgUser[key].patOT[idx])ST.otCfgUser[key].patOT[idx].r=parseFloat(this.value);
+        ST.otCfg[key].patOT=JSON.parse(JSON.stringify(ST.otCfgUser[key].patOT));
+        savST();renderOTCfg();
+      };})(sk,i);
+      var d1=document.createElement('div');d1.innerHTML='<div style="font-size:11px;color:#FBBF24;margin-bottom:3px">Seg '+(i+1)+' Hours</div>';d1.appendChild(hInp);
+      var d2=document.createElement('div');d2.innerHTML='<div style="font-size:11px;color:#FBBF24;margin-bottom:3px">Rate</div>';d2.appendChild(rSel);
+      row.appendChild(d1);row.appendChild(d2);wrap.appendChild(row);
+    });
+    cont.appendChild(wrap);
+  });
+}
+
+function resetOv(){if(confirm('Clear all overrides, notes, highlights?')){ST.ov={};ST.hl={};ST.nt={};ST.ph={};ST.manualOT={};ST.otHours={};savST();render();}}
+function resetAll(){if(confirm('Full reset?')){ST={cs:'2026-05-10',pat:['morning','morning','morning','night','night','night','off','off','afternoon','afternoon','afternoon','off'],ov:{},nt:{},hl:{},ph:{},manualOT:{},otHours:{},otCfgUser:{},tp:[],otCfg:JSON.parse(JSON.stringify(DEF_OT)),otRate:0.317,otCurr:'BHD'};savST();render();}}
+
+// ── OT PAGE ───────────────────────────────────────────────────────────────────
+function renderOTPage(){
+  var today=new Date();today.setHours(0,0,0,0);
+  var mS=new Date(today.getFullYear(),today.getMonth(),1);
+  var mE=new Date(today.getFullYear(),today.getMonth()+1,0);
+  document.getElementById('otFrom').value=dk(mS);
+  document.getElementById('otTo').value=dk(mE);
+  refreshOT();
+}
+
+function refreshOT(){
+  var fEl=document.getElementById('otFrom'),tEl=document.getElementById('otTo');
+  if(!fEl||!tEl)return;
+  var r=document.getElementById('otResult');if(!r)return;
+  try{
+    var res=calcOT(fEl.value,tEl.value);
+    var curr=getCurrSym(ST.otCurr||'BHD');
+    var rate=parseFloat(ST.otRate)||0.317;
+    var otDays=[],phDays=[],allWork=[];
+    res.days.forEach(function(d){
+      if(d.dayH>0)allWork.push(d);
+      if(d.dayOtH>0&&!d.isPH)otDays.push(d);
+      if(d.isPH)phDays.push(d);
+    });
+    var html='';
+    // Summary
+    html+='<div class="otsum">';
+    html+='<div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.06em;margin-bottom:8px">SUMMARY</div>';
+    html+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:10px">';
+    html+='<div style="background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.4);border-radius:10px;padding:9px;text-align:center">';
+    html+='<div style="font-size:9px;color:#FBBF24;margin-bottom:2px;font-weight:700">OT HRS</div>';
+    html+='<div style="font-size:24px;font-weight:800;color:#FBBF24">'+res.otH.toFixed(1)+'h</div>';
+    html+='<div style="font-size:10px;color:var(--mu)">'+curr+res.otPay.toFixed(3)+'</div></div>';
+    html+='<div style="background:rgba(6,182,212,.1);border:1px solid rgba(6,182,212,.4);border-radius:10px;padding:9px;text-align:center">';
+    html+='<div style="font-size:9px;color:#06B6D4;margin-bottom:2px;font-weight:700">PH HRS</div>';
+    html+='<div style="font-size:24px;font-weight:800;color:#06B6D4">'+res.phH.toFixed(1)+'h</div>';
+    html+='<div style="font-size:10px;color:var(--mu)">'+curr+res.phPay.toFixed(3)+'</div></div>';
+    html+='<div style="background:rgba(129,140,248,.1);border:1px solid rgba(129,140,248,.4);border-radius:10px;padding:9px;text-align:center">';
+    html+='<div style="font-size:9px;color:#818CF8;margin-bottom:2px;font-weight:700">TOTAL PAY</div>';
+    html+='<div style="font-size:18px;font-weight:800;color:#818CF8">'+curr+res.totalPay.toFixed(3)+'</div>';
+    html+='<div style="font-size:10px;color:var(--mu)">OT+PH</div></div></div>';
+    html+='<div style="font-size:11px;color:var(--mu)">Worked: <b style="color:var(--tx)">'+res.totalH.toFixed(0)+'h</b>';
+    html+=' &middot; Days: <b style="color:var(--tx)">'+allWork.length+'</b>';
+    html+=' &middot; OT: <b style="color:#FBBF24">'+otDays.length+' days / '+res.otH.toFixed(1)+'h</b>';
+    html+=' &middot; PH: <b style="color:#06B6D4">'+phDays.length+'</b></div></div>';
+
+    if(otDays.length===0&&phDays.length===0){
+      html+='<div style="background:var(--s2);border-radius:12px;padding:20px;text-align:center;margin:10px 0">';
+      html+='<div style="font-size:26px;margin-bottom:6px">&#10003;</div>';
+      html+='<div style="font-size:14px;font-weight:700;color:#10B981">No Overtime or Public Holidays</div></div>';
+    }
+
+    if(otDays.length>0){
+      html+='<div style="font-size:11px;font-weight:700;color:#FBBF24;letter-spacing:.08em;text-transform:uppercase;margin:14px 0 7px">Overtime Days</div>';
+      html+='<div style="background:var(--s1);border-radius:12px;overflow:hidden;margin-bottom:12px">';
+      otDays.forEach(function(d){
+        var sh=SH[d.sk]||SH.off;var col=SC[d.sk]||'#4B5563';var date=pd(d.ds);
+        var baseSh=SH[d.base];
+        var reason=(!baseSh||!baseSh.s)?('Off duty: '+d.dayH+'h'):d.dayOtH.toFixed(1)+'h OT';
+        html+='<div style="padding:11px 14px;border-bottom:1px solid var(--bd)">';
+        html+='<div style="display:flex;align-items:center;gap:10px">';
+        html+='<div style="font-size:20px">'+sh.e+'</div>';
+        html+='<div style="flex:1"><div style="font-size:13px;font-weight:700;color:'+col+'">'+date.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})+'</div>';
+        html+='<div style="font-size:11px;color:var(--mu)">'+reason+'</div></div>';
+        html+='<div style="text-align:right"><div style="font-size:14px;font-weight:800;color:#FBBF24">'+d.dayOtH.toFixed(1)+'h</div>';
+        html+='<div style="font-size:11px;color:var(--mu)">'+curr+d.dayOtPay.toFixed(3)+'</div></div></div>';
+        if(d.segs&&d.segs.length){
+          html+='<div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap">';
+          d.segs.forEach(function(s){html+='<span style="background:rgba(251,191,36,.12);border-radius:4px;padding:2px 8px;font-size:10px;color:#FBBF24">'+parseFloat(s.h).toFixed(1)+'h x'+s.r+'</span>';});
+          html+='</div></div>';
+        } else {html+='</div>';}
+      });
+      html+='</div>';
+    }
+
+    if(phDays.length>0){
+      html+='<div style="font-size:11px;font-weight:700;color:#06B6D4;letter-spacing:.08em;text-transform:uppercase;margin:14px 0 7px">Public Holiday Days</div>';
+      html+='<div style="background:var(--s1);border-radius:12px;overflow:hidden;margin-bottom:12px">';
+      phDays.forEach(function(d){
+        var sh=SH[d.sk]||SH.off;var col=SC[d.sk]||'#4B5563';var date=pd(d.ds);
+        html+='<div style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--bd)">';
+        html+='<div style="font-size:20px">'+sh.e+'</div>';
+        html+='<div style="flex:1"><div style="font-size:13px;font-weight:700;color:#06B6D4">'+date.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})+'</div>';
+        html+='<div style="font-size:11px;color:var(--mu)">'+sh.n+' &middot; '+d.dayH+'h x1.5</div></div>';
+        html+='<div style="text-align:right"><div style="font-size:14px;font-weight:800;color:#06B6D4">'+curr+d.phPay.toFixed(3)+'</div>';
+        html+='<div style="font-size:11px;color:var(--mu)">'+d.dayH+'h</div></div></div>';
+      });
+      html+='</div>';
+    }
+
+    html+='<div style="font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.08em;text-transform:uppercase;margin:14px 0 7px">All Work Days by Shift</div>';
+    var byType={};
+    allWork.forEach(function(d){
+      if(!byType[d.sk])byType[d.sk]={count:0,h:0,otCount:0,otH:0,phCount:0};
+      byType[d.sk].count++;byType[d.sk].h+=d.dayH;
+      if(d.dayOtH>0&&!d.isPH){byType[d.sk].otCount++;byType[d.sk].otH+=d.dayOtH;}
+      if(d.isPH)byType[d.sk].phCount++;
+    });
+    html+='<div style="background:var(--s1);border-radius:12px;overflow:hidden;margin-bottom:12px">';
+    var keys=Object.keys(byType);
+    if(!keys.length)html+='<div style="padding:14px;text-align:center;color:var(--mu)">No work days</div>';
+    keys.forEach(function(sk){
+      var data=byType[sk];var sh=SH[sk]||SH.off;var col=SC[sk]||'#4B5563';
+      html+='<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--bd)">';
+      html+='<div style="font-size:18px">'+sh.e+'</div>';
+      html+='<div style="flex:1"><div style="font-size:13px;font-weight:700;color:'+col+'">'+sh.n+'</div>';
+      html+='<div style="font-size:11px;color:var(--mu)">'+data.count+' day'+(data.count!==1?'s':'');
+      if(data.otH>0)html+=' &middot; <span style="color:#FBBF24">'+data.otH.toFixed(1)+'h OT</span>';
+      if(data.phCount>0)html+=' &middot; <span style="color:#06B6D4">'+data.phCount+' PH</span>';
+      html+='</div></div><div style="text-align:right;min-width:50px"><div style="font-size:13px;font-weight:700;color:'+col+'">'+data.h.toFixed(0)+'h</div></div></div>';
+    });
+    html+='</div>';
+    html+='<div style="text-align:center;padding:16px 0;font-size:11px;color:#3A3A55">&copy; '+new Date().getFullYear()+' Sayed Baqer Alseb3 Limited. All rights reserved.</div>';
+    r.innerHTML=html;
+  }catch(err){
+    document.getElementById('otResult').innerHTML='<div style="padding:20px;color:#EF4444;font-size:13px">Error: '+err.message+'</div>';
+  }
+}
+
+// ── BOOT ─────────────────────────────────────────────────────────────────────
+loadST();
+document.getElementById('yr').textContent=new Date().getFullYear();
+render();
+</script>
+</body>
+</html>
